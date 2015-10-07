@@ -14,7 +14,9 @@ typedef enum __screen_type
   /* Shows an error */
   SCREEN_ERROR,
   /* Shows the big time counter and temp when the pump is on */
-  SCREEN_PUMP
+  SCREEN_PUMP,
+  /* Heating up for steam */
+  SCREEN_HEATUP
 } SCREEN_TYPE;
 
 typedef enum __error_type
@@ -39,10 +41,17 @@ typedef struct __temp_config_data
 
 typedef struct __current_state
 {
+  /* unfiltered temperature value */
+  double temperature_fast;
+  /* filtered, slow temperature value */
   double temperature;
+  /* pump state (1 = on, 0 = off) */
   unsigned char pump;
+  /* temperature range for display */
   RANGE range;
+  /* current error */
   ERROR_TYPE error;
+  /* current screen */
   SCREEN_TYPE screen;
 } CURRENT_STATE;
 

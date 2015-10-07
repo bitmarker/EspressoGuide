@@ -1,8 +1,8 @@
 #include "espresso_guide.h"
 
 static TEMP_CONFIG temp_config;
-static CURRENT_STATE state;
-  
+static CURRENT_STATE current_state;
+
 /* Initializing the 1ms timer */
 void setupTimer()
 {
@@ -59,12 +59,18 @@ void setupDisplay()
 
 void setupState()
 {
-  state.error = ERROR_NONE;
-  state.screen = SCREEN_WELCOME;
+  current_state.error = ERROR_NONE;
+  current_state.screen = SCREEN_WELCOME;
+}
+
+void setupSerial()
+{
+  Serial.begin(115200);
 }
 
 void setup()
 {
+  setupSerial();
   setupConfig();
   setupState();
   setupDisplay();
@@ -82,6 +88,11 @@ void showScreenWarmUp()
 }
 
 void showScreenEspresso()
+{
+  
+}
+
+void showScreenHeatUp()
 {
   
 }
@@ -120,6 +131,9 @@ void updateDisplay(CURRENT_STATE *state)
     case SCREEN_ESPRESSO:
       showScreenEspresso();
       break;
+    case SCREEN_HEATUP:
+      showScreenHeatUp();
+      break;
     case SCREEN_STEAM:
       showScreenSteam();
       break;
@@ -157,7 +171,26 @@ void selectScreen(CURRENT_STATE *state)
      state->temperature < temp_config.espresso.max)
   {
     copy_range(&temp_config.espresso, &state->range);
-    state->screen = SCREEN_ESPRESSO;
+
+    if(state->pump)
+    {
+      state->screen = SCREEN_PUMP;
+    }
+    else
+    {
+      state->screen = SCREEN_ESPRESSO;
+    }
+
+    return;
+  }
+
+  /* Heating up for steam */
+  if(state->temperature >= temp_config.espresso.max &&
+     state->temperature < temp_config.steam.min)
+  {
+    state->range.min = temp_config.espresso.max;
+    state->range.max = temp_config.steam.min;
+    state->screen = SCREEN_HEATUP;
     return;
   }
 
@@ -173,19 +206,63 @@ void selectScreen(CURRENT_STATE *state)
 
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
-  state->temperature = 25.0;
+  /* TODO: filter temperature values so they don't update to quickly */
+
+  if(!Serial.available())
+  {
+    return;
+  }
+ 
+  state->temperature_fast = Serial.parseFloat();
+  
+
+  /* Initialize the last value */
+  if(state->temperature < temp_config.warmup.min)
+  {
+    state->temperature = state->temperature_fast;
+  }
+
+  /* Build the filtered value */
+  state->temperature = (state->temperature_fast + state->temperature) / 2;
+}
+
+void printOutDebug(CURRENT_STATE *state)
+{
+  Serial.print("Error:      ");
+  Serial.println(state->error);
+  
+  Serial.print("Temp:       ");
+  Serial.println(state->temperature);
+
+  Serial.print("Fast Temp:  ");
+  Serial.println(state->temperature_fast);
+
+  Serial.print("Pump:       ");
+  Serial.println(state->pump);
+  
+  Serial.print("Screen:     ");
+  Serial.println(state->screen);
+
+  Serial.print("Range:      ");
+  Serial.print(state->range.min);
+  Serial.print(" - ");
+  Serial.println(state->range.max);
+
+  Serial.println("--------------------");
 }
 
 void loop()
 {
   /* Read the sensor */
-  updateCurrentTemperature(&state);
+  updateCurrentTemperature(&current_state);
   
   /* Check which screen should be displayed */
-  selectScreen(&state);
+  selectScreen(&current_state);
   
   /* Draw the display */
-  updateDisplay(&state);
+  updateDisplay(&current_state);
+
+  printOutDebug(&current_state);
 
   /* Wait a bit... */
   delay(500);
