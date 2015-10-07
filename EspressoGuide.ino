@@ -29,6 +29,32 @@ ISR(TIMER1_COMPA_vect)
   for(i = 0; i < MAX_COUNTERS; i++)
   {
     counters[i].count++;
+
+    if(counters[i].count > counters[i].interval)
+    {
+      counters[i].count = 0;
+      counters[i].elapsed = 1;
+    }
+  }
+}
+
+void init_counter(ACTION_COUNTER *counter, unsigned int interval, ACTION_COUNTER_CALLBACK callback)
+{
+  counter->elapsed = 0;
+  counter->interval = interval;
+  counter->count = 0;
+  counter->callback = callback;
+}
+
+void execute_counters(CURRENT_STATE *state)
+{
+  int i;
+  for(i = 0; i < MAX_COUNTERS; i++)
+  {
+    if(counters[i].elapsed)
+    {
+      counters[i].callback(state);
+    }
   }
 }
 
@@ -76,12 +102,35 @@ void setupSerial()
   Serial.begin(115200);
 }
 
+void initCounters()
+{
+  int i;
+  for(i = 0; i < MAX_COUNTERS; i++)
+  {
+    counters[i].count = 0;
+    counters[i].interval = 0;
+    counters[i].callback = 0;
+    counters[i].elapsed = 0;
+  }
+}
+
+void setupCounters()
+{
+  initCounters();
+  
+  init_counter(&counters[0], 500, updateCurrentTemperature);
+  init_counter(&counters[1], 500, selectScreen);
+  init_counter(&counters[2], 500, updateDisplay);
+  init_counter(&counters[3], 500, printOutDebug);
+}
+
 void setup()
 {
   setupSerial();
   setupConfig();
   setupState();
   setupDisplay();
+  setupCounters();
   setupTimer();
 }
 
@@ -153,7 +202,7 @@ void updateDisplay(CURRENT_STATE *state)
     case SCREEN_ERROR:
       showScreenError();
       break;
-    case SCREEN_PUMP:
+    case SCREEN_BREW:
       showScreenPump();
       break;
     case SCREEN_TOOCOLD:
@@ -199,7 +248,7 @@ void selectScreen(CURRENT_STATE *state)
 
     if(state->pump)
     {
-      state->screen = SCREEN_PUMP;
+      state->screen = SCREEN_BREW;
     }
     else
     {
@@ -286,16 +335,11 @@ void printOutDebug(CURRENT_STATE *state)
 
 void loop()
 {
-  /* Read the sensor */
-  updateCurrentTemperature(&current_state);
   
-  /* Check which screen should be displayed */
-  selectScreen(&current_state);
-  
-  /* Draw the display */
-  updateDisplay(&current_state);
 
-  printOutDebug(&current_state);
+  
+
+  execute_counters(&current_state);
 
   /* Wait a bit... */
   delay(500);

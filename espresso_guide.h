@@ -14,7 +14,7 @@ typedef enum __screen_type
   /* 4: Shows an error */
   SCREEN_ERROR,
   /* 5: Shows the big time counter and temp when the pump is on */
-  SCREEN_PUMP,
+  SCREEN_BREW,
   /* 6: Heating up for steam */
   SCREEN_HEATUP,
   /* 7: Temperature under warmup.min */
@@ -59,10 +59,16 @@ typedef struct __current_state
   SCREEN_TYPE screen;
 } CURRENT_STATE;
 
+typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);
+
 typedef struct __action_counter
 {
   unsigned long count;
   unsigned int interval;
+  unsigned char elapsed;
+  ACTION_COUNTER_CALLBACK callback;
 } ACTION_COUNTER;
+
+
 
 #endif
