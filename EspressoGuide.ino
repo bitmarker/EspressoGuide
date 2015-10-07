@@ -3,6 +3,10 @@
 static TEMP_CONFIG temp_config;
 static CURRENT_STATE current_state;
 
+#define MAX_COUNTERS 5
+static ACTION_COUNTER counters[MAX_COUNTERS];
+
+
 /* Initializing the 1ms timer */
 void setupTimer()
 {
@@ -21,7 +25,11 @@ void setupTimer()
 /* Timer ISR  */
 ISR(TIMER1_COMPA_vect)
 {
-  
+  int i;
+  for(i = 0; i < MAX_COUNTERS; i++)
+  {
+    counters[i].count++;
+  }
 }
 
 void copy_range(RANGE *from, RANGE *to)

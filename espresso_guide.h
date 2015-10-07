@@ -59,4 +59,10 @@ typedef struct __current_state
   SCREEN_TYPE screen;
 } CURRENT_STATE;
 
+typedef struct __action_counter
+{
+  unsigned long count;
+  unsigned int interval;
+} ACTION_COUNTER;
+
 #endif
