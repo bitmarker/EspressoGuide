@@ -112,6 +112,11 @@ void showScreenPump()
   
 }
 
+void showScreenOverRange(SCREEN_TYPE screen)
+{
+  
+}
+
 /* Function for outputting the data to the display */
 void updateDisplay(CURRENT_STATE *state)
 {
@@ -143,6 +148,10 @@ void updateDisplay(CURRENT_STATE *state)
     case SCREEN_PUMP:
       showScreenPump();
       break;
+    case SCREEN_TOOCOLD:
+    case SCREEN_TOOHOT:
+      showScreenOverRange(state->screen);
+      break;
     default:
       break;
   }
@@ -154,6 +163,14 @@ void selectScreen(CURRENT_STATE *state)
   if(state->error != ERROR_NONE)
   {
     state->screen = SCREEN_ERROR;
+    return;
+  }
+
+  /* Not warming up, too cold, may be sensor fault? */
+  if(state->temperature < temp_config.warmup.min)
+  {
+    copy_range(&temp_config.warmup, &state->range);
+    state->screen = SCREEN_TOOCOLD;
     return;
   }
 
@@ -202,19 +219,27 @@ void selectScreen(CURRENT_STATE *state)
     state->screen = SCREEN_STEAM;
     return;
   }
+
+  /* Getting too hot! */
+  if(state->temperature >= temp_config.max)
+  {
+    copy_range(&temp_config.steam, &state->range);
+    state->screen = SCREEN_TOOHOT;
+    return;
+  }
 }
 
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
   /* TODO: filter temperature values so they don't update to quickly */
 
-  if(!Serial.available())
-  {
-    return;
-  }
- 
-  state->temperature_fast = Serial.parseFloat();
   
+  double t = Serial.parseFloat();
+
+  if(t > 0)
+  {
+    state->temperature_fast = t;
+  }
 
   /* Initialize the last value */
   if(state->temperature < temp_config.warmup.min)

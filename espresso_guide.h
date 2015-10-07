@@ -3,20 +3,24 @@
 
 typedef enum __screen_type
 {
-  /* Welcome screen shows at the startup */
+  /* 0: Welcome screen shows at the startup */
   SCREEN_WELCOME = 0,
-  /* Shows arrows and temp. T < Tmin */
+  /* 1: Shows arrows and temp. T < Tmin */
   SCREEN_WARMUP,
-  /* Shows the espresso cup and temp. Tmin < T < Tsteam */
+  /* 2: Shows the espresso cup and temp. Tmin < T < Tsteam */
   SCREEN_ESPRESSO,
-  /* Shows the espresso symbol and temp. Tsteam < T < Tmax */
+  /* 3: Shows the espresso symbol and temp. Tsteam < T < Tmax */
   SCREEN_STEAM,
-  /* Shows an error */
+  /* 4: Shows an error */
   SCREEN_ERROR,
-  /* Shows the big time counter and temp when the pump is on */
+  /* 5: Shows the big time counter and temp when the pump is on */
   SCREEN_PUMP,
-  /* Heating up for steam */
-  SCREEN_HEATUP
+  /* 6: Heating up for steam */
+  SCREEN_HEATUP,
+  /* 7: Temperature under warmup.min */
+  SCREEN_TOOCOLD,
+  /* 8: Temperature under warmup.min */
+  SCREEN_TOOHOT,
 } SCREEN_TYPE;
 
 typedef enum __error_type
