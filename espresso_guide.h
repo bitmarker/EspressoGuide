@@ -17,5 +17,33 @@ typedef enum __screen_type
   SCREEN_PUMP
 } SCREEN_TYPE;
 
+typedef enum __error_type
+{
+  ERROR_NONE = 0,
+  ERROR_SENSOR
+} ERROR_TYPE;
+
+typedef struct __range
+{
+  double min;
+  double max;
+} RANGE;
+
+typedef struct __temp_config_data
+{
+  RANGE warmup;
+  RANGE espresso;
+  RANGE steam;
+  double max;
+} TEMP_CONFIG;
+
+typedef struct __current_state
+{
+  double temperature;
+  unsigned char pump;
+  RANGE range;
+  ERROR_TYPE error;
+  SCREEN_TYPE screen;
+} CURRENT_STATE;
 
 #endif
