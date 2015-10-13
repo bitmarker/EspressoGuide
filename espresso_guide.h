@@ -57,6 +57,8 @@ typedef struct __current_state
   ERROR_TYPE error;
   /* current screen */
   SCREEN_TYPE screen;
+  /* Number of shots */
+  unsigned int shot_count;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);
@@ -69,6 +71,17 @@ typedef struct __action_counter
   ACTION_COUNTER_CALLBACK callback;
 } ACTION_COUNTER;
 
+typedef struct __time
+{
+  unsigned int hours;
+  unsigned int minutes;
+  unsigned int seconds;
+} TIME;
 
+typedef struct __point
+{
+  unsigned int x;
+  unsigned int y;  
+} POINT;
 
 #endif
