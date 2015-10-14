@@ -3,7 +3,7 @@
 
 TEMP_CONFIG temp_config;
 CURRENT_STATE current_state;
-TIME run_time = {0, 0, 0};
+
 
 int SCREEN_WIDTH = uView.getLCDWidth();
 int SCREEN_HEIGHT = uView.getLCDHeight();
@@ -33,10 +33,14 @@ ISR(TIMER1_COMPA_vect)
   int i;
   for(i = 0; i < MAX_COUNTERS; i++)
   {
+    /* Check if the callback function is set */
     if(counters[i].callback != 0)
     {
+      /* Increment the counter */
       counters[i].count++;
-  
+
+      /* Counter has reached the interval, set elapsed flag to 1,
+         so the callback can be executed */
       if(counters[i].count > counters[i].interval)
       {
         counters[i].count = 0;
@@ -46,8 +50,16 @@ ISR(TIMER1_COMPA_vect)
   }
 }
 
+void initTime(TIME *t)
+{
+  t->seconds = 0;
+  t->hours = 0;
+  t->minutes = 0;
+}
+
 void formatTime(TIME *t, char *buffer)
 {
+  /* Show the hours only when greater than 0 */
   if(t->hours > 0)
   {
     sprintf(buffer, "%d:%02d:%02d", t->hours, t->minutes, t->seconds);
@@ -238,6 +250,8 @@ void setupState()
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
   current_state.shot_count = 0;
+  initTime(&current_state.run_time);
+  initTime(&current_state.brew_time);
 }
 
 void setupSerial()
@@ -247,10 +261,15 @@ void setupSerial()
 
 void updateClock(CURRENT_STATE *state)
 {
-  incrementSeconds(&run_time);
+  incrementSeconds(&state->run_time);
 
-  /* TODO: remove this line */
-  // incrementShots(&state->shot_count);
+  if(state->pump)
+  {
+    incrementSeconds(&state->brew_time);
+  }
+
+  
+  incrementShots(&state->shot_count);
 }
 
 void setupCounters()
@@ -324,13 +343,34 @@ void showScreenOverRange(SCREEN_TYPE screen)
   
 }
 
+void drawTrendArrow(unsigned char rising, unsigned int y_origin)
+{
+  POINT pos;
+  unsigned int height = 5;
+  int y;
+  
+  pos.y += y_origin + (rising ? (-1 * (height) - 2) : (uView.getFontHeight()) + 2);
+  
+  for(y = 0; y < height; y++)
+  {
+    if(rising)
+    {
+      uView.line(SCREEN_WIDTH/4*3 - y, pos.y + y, SCREEN_WIDTH/4*3 + y, pos.y + y);
+    }
+    else
+    {
+      uView.line(SCREEN_WIDTH/4*3 - (height - y - 1), pos.y + y, SCREEN_WIDTH/4*3 + (height - y - 1), pos.y + y);
+    }
+  }
+}
+
 /* Function for outputting the data to the display */
 void updateDisplay(CURRENT_STATE *state)
 {
   uView.clear(PAGE);
 
   /* Display the run time and shot counter */
-  drawTopBar(&run_time, state->shot_count);
+  drawTopBar(&state->run_time, state->shot_count);
 
   /* Calculate the percentage of the current temperature within the range  */
   float percentage = (state->temperature_fast - state->range.min)/(state->range.max - state->range.min);
@@ -341,19 +381,17 @@ void updateDisplay(CURRENT_STATE *state)
   /* Display the current temperature */
   int temp_width = (getInt16PrintLen((int)(state->temperature_fast)) + 2)*(uView.getFontWidth() + 1) + 1;
   int temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
-  
+
+  /* Move the cursor for drawing the temperature to the 3/4 of the screen */
   uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
-  
+
+  /* Print out the temperature with one decimal place */
   uView.print((int)(state->temperature_fast));
   uView.print(".");
   uView.print((int)((state->temperature_fast - (int)(state->temperature_fast)) * 10));
 
-  temp_y += uView.getFontHeight() + 2;
-
-  for(int x = 0; x < 5; x++)
-  {
-    uView.line(SCREEN_WIDTH/4*3 - x, temp_y + x, SCREEN_WIDTH/4*3 + x, temp_y + x);
-  }
+  drawTrendArrow(0, temp_y);
+  drawTrendArrow(1, temp_y);
   
   /* TODO: change this */
   uView.setCursor(0, SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2);
@@ -395,12 +433,26 @@ void updateDisplay(CURRENT_STATE *state)
   uView.display();
 }
 
+void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
+{
+  
+  
+  state->screen = new_screen;
+}
+
 void selectScreen(CURRENT_STATE *state)
 {
+  /*
+  if(state->screen != SCREEN_BREW)
+  {
+    state->shot_state = SHOT_IDLE;
+  }
+  */
+  
   /* Showing an error :( */
   if(state->error != ERROR_NONE)
   {
-    state->screen = SCREEN_ERROR;
+    changeScreen(state, SCREEN_ERROR);
     return;
   }
 
@@ -409,7 +461,7 @@ void selectScreen(CURRENT_STATE *state)
   {
     state->range.min = 0;
     state->range.max = temp_config.warmup.min;
-    state->screen = SCREEN_TOOCOLD;
+    changeScreen(state, SCREEN_TOOCOLD);
     return;
   }
 
@@ -418,7 +470,7 @@ void selectScreen(CURRENT_STATE *state)
      state->temperature < temp_config.warmup.max)
   {
     copy_range(&temp_config.warmup, &state->range);
-    state->screen = SCREEN_WARMUP;
+    changeScreen(state, SCREEN_WARMUP);
     return;
   }
 
@@ -430,11 +482,11 @@ void selectScreen(CURRENT_STATE *state)
 
     if(state->pump)
     {
-      state->screen = SCREEN_BREW;
+      changeScreen(state, SCREEN_BREW);
     }
     else
     {
-      state->screen = SCREEN_ESPRESSO;
+      changeScreen(state, SCREEN_ESPRESSO);
     }
 
     return;
@@ -520,8 +572,6 @@ void printOutDebug(CURRENT_STATE *state)
 void loop()
 {
   executeCounters(&current_state);
-  
-  /* Wait a bit... */
   delay(1);
 }
 

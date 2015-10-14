@@ -23,6 +23,13 @@ typedef enum __screen_type
   SCREEN_TOOHOT,
 } SCREEN_TYPE;
 
+typedef enum __shot_state
+{
+  SHOT_IDLE = 0,
+  SHOT_BREWING,
+  SHOT_DONE
+} SHOT_STATE;
+
 typedef enum __error_type
 {
   ERROR_NONE = 0,
@@ -43,6 +50,19 @@ typedef struct __temp_config_data
   double max;
 } TEMP_CONFIG;
 
+typedef struct __time
+{
+  unsigned int hours;
+  unsigned int minutes;
+  unsigned int seconds;
+} TIME;
+
+typedef struct __point
+{
+  unsigned int x;
+  unsigned int y;  
+} POINT;
+
 typedef struct __current_state
 {
   /* unfiltered temperature value */
@@ -59,6 +79,12 @@ typedef struct __current_state
   SCREEN_TYPE screen;
   /* Number of shots */
   unsigned int shot_count;
+  /* Time since power on */
+  TIME run_time;
+  /* Time since the pump was turned on */
+  TIME brew_time;
+  /* Shot was done */
+  SHOT_STATE shot_state;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);
@@ -71,17 +97,5 @@ typedef struct __action_counter
   ACTION_COUNTER_CALLBACK callback;
 } ACTION_COUNTER;
 
-typedef struct __time
-{
-  unsigned int hours;
-  unsigned int minutes;
-  unsigned int seconds;
-} TIME;
-
-typedef struct __point
-{
-  unsigned int x;
-  unsigned int y;  
-} POINT;
 
 #endif
