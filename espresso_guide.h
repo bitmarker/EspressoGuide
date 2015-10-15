@@ -26,8 +26,7 @@ typedef enum __screen_type
 typedef enum __shot_state
 {
   SHOT_IDLE = 0,
-  SHOT_BREWING,
-  SHOT_DONE
+  SHOT_BREWING
 } SHOT_STATE;
 
 typedef enum __error_type
@@ -48,7 +47,9 @@ typedef struct __temp_config_data
   RANGE espresso;
   RANGE steam;
   double max;
-} TEMP_CONFIG;
+  unsigned int shot_min_time;
+  unsigned char brew_count_delay;
+} CONFIG;
 
 typedef struct __time
 {
@@ -85,6 +86,10 @@ typedef struct __current_state
   TIME brew_time;
   /* Shot was done */
   SHOT_STATE shot_state;
+  /* Delay before the brew counter starts */
+  unsigned char brew_counter_delay;
+  /* Temperature trend (-1, 0, 1) */
+  int temp_trend;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);

@@ -1,18 +1,18 @@
 #include "espresso_guide.h"
 #include <MicroView.h>
 
-TEMP_CONFIG temp_config;
+CONFIG config;
 CURRENT_STATE current_state;
-
-
-int SCREEN_WIDTH = uView.getLCDWidth();
-int SCREEN_HEIGHT = uView.getLCDHeight();
 
 #define MAX_COUNTERS 5
 ACTION_COUNTER counters[MAX_COUNTERS];
 
+int SCREEN_WIDTH = uView.getLCDWidth();
+int SCREEN_HEIGHT = uView.getLCDHeight();
 
-/* Initializing the 1ms timer */
+/**
+ * Initializing the 1ms timer
+ */
 void setupTimer()
 {
   /* disable all interrupts */
@@ -27,7 +27,10 @@ void setupTimer()
   interrupts();                           /* enable all interrupts */
 }
 
-/* Timer ISR  */
+
+/**
+ * Timer ISR
+ */
 ISR(TIMER1_COMPA_vect)
 {
   int i;
@@ -50,6 +53,9 @@ ISR(TIMER1_COMPA_vect)
   }
 }
 
+/**
+ * Resets the time structure
+ */
 void initTime(TIME *t)
 {
   t->seconds = 0;
@@ -57,6 +63,10 @@ void initTime(TIME *t)
   t->minutes = 0;
 }
 
+
+/**
+ * Formats the time as a string for the top bar
+ */
 void formatTime(TIME *t, char *buffer)
 {
   /* Show the hours only when greater than 0 */
@@ -70,6 +80,11 @@ void formatTime(TIME *t, char *buffer)
   }
 }
 
+
+/**
+ * Increments the seconds of a time structure. If the seconds count is greater than
+ * 59, minutes will be counted (and also hours)
+ */
 void incrementSeconds(TIME *t)
 {
   t->seconds++;
@@ -94,6 +109,19 @@ void incrementSeconds(TIME *t)
   }
 }
 
+
+/**
+ * Converts a time structure to seconds
+ */
+unsigned long timeInSeconds(TIME *t)
+{
+  return t->seconds + t->minutes * 60 + t->hours * 3600;
+}
+
+
+/**
+ * Increments the shot counter. If the count is greater than 99 reset the counter
+ */
 void incrementShots(unsigned int *shot_count)
 {
   (*shot_count)++;
@@ -104,6 +132,10 @@ void incrementShots(unsigned int *shot_count)
   }
 }
 
+
+/*
+ * Resets a time counter
+ */
 void initCounter(ACTION_COUNTER *counter, unsigned int interval, ACTION_COUNTER_CALLBACK callback)
 {
   counter->elapsed = 0;
@@ -112,6 +144,11 @@ void initCounter(ACTION_COUNTER *counter, unsigned int interval, ACTION_COUNTER_
   counter->callback = callback;
 }
 
+
+/*
+ * This function is called in the main loop. All timer callbacks with elapsed
+ * flag set to 1 will be executed
+ */
 void executeCounters(CURRENT_STATE *state)
 {
   int i;
@@ -134,22 +171,28 @@ void copy_range(RANGE *from, RANGE *to)
 void setupConfig()
 {
   /* If the temperature is below cold start, the boiler is cold */
-  temp_config.warmup.min = 30.0;
+  config.warmup.min = 30.0;
   /* Lowest temperature edge, show the hedt up screen */
-  temp_config.warmup.max = 80.0;
+  config.warmup.max = 80.0;
   
   /* Lowest point of the espresso thermostat */
-  temp_config.espresso.min = 80.0;
+  config.espresso.min = 80.0;
   /* Highest point of the espresso thermostat */
-  temp_config.espresso.max = 105.0;
+  config.espresso.max = 105.0;
 
   /* Lowest point of the steam thermostat */
-  temp_config.steam.min = 150.0;
+  config.steam.min = 150.0;
   /* Highest point of the steam thermostat */
-  temp_config.steam.max = 250.0;
+  config.steam.max = 250.0;
   
   /* Max temperature of the boiler */
-  temp_config.max = 270;
+  config.max = 270;
+
+  /* Minimal shot time */
+  config.shot_min_time = 15;
+
+  /* Delay in seconds before the brew counter starts counting */
+  config.brew_count_delay = 2;
 }
 
 void drawTopBar(TIME *t, unsigned int shot_count)
@@ -263,13 +306,18 @@ void updateClock(CURRENT_STATE *state)
 {
   incrementSeconds(&state->run_time);
 
-  if(state->pump)
+  if(state->shot_state == SHOT_BREWING)
   {
-    incrementSeconds(&state->brew_time);
+    /* Starts counting the brew time only when the delay is over */
+    if(state->brew_counter_delay > 0)
+    {
+      state->brew_counter_delay--;
+    }
+    else
+    {
+      incrementSeconds(&state->brew_time);
+    }
   }
-
-  
-  incrementShots(&state->shot_count);
 }
 
 void setupCounters()
@@ -289,8 +337,6 @@ void setupCounters()
   initCounter(&counters[i++], 500, selectScreen);
   initCounter(&counters[i++], 1000, updateClock);
   initCounter(&counters[i++], 500, updateDisplay);
-  
-  //initCounter(&counters[i++], 1000, printOutDebug);
 }
 
 void setup()
@@ -303,44 +349,21 @@ void setup()
   setupTimer();
 }
 
-void showScreenWelcome()
+void drawMainIcon(CURRENT_STATE *state)
 {
+  POINT origin;
   
-}
+  unsigned char icon_height = 30;
+  unsigned char icon_width = SCREEN_WIDTH / 4;
+  
+  
+  origin.x = SCREEN_WIDTH / 4 - icon_width / 2;
+  origin.y = SCREEN_HEIGHT / 2 - icon_height / 2;
 
-void showScreenWarmUp()
-{
-  
-}
+  uView.rect(origin.x, origin.y, icon_width, icon_height);
 
-void showScreenEspresso()
-{
-  
-}
-
-void showScreenHeatUp()
-{
-  
-}
-
-void showScreenSteam()
-{
-  
-}
-
-void showScreenError()
-{
-  
-}
-
-void showScreenPump()
-{
-  
-}
-
-void showScreenOverRange(SCREEN_TYPE screen)
-{
-  
+  uView.setCursor(origin.x, origin.y);
+  uView.print(state->screen);
 }
 
 void drawTrendArrow(unsigned char rising, unsigned int y_origin)
@@ -390,6 +413,7 @@ void updateDisplay(CURRENT_STATE *state)
   uView.print(".");
   uView.print((int)((state->temperature_fast - (int)(state->temperature_fast)) * 10));
 
+  
   drawTrendArrow(0, temp_y);
   drawTrendArrow(1, temp_y);
   
@@ -397,58 +421,67 @@ void updateDisplay(CURRENT_STATE *state)
   uView.setCursor(0, SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2);
   uView.print(state->screen);
 
-
-  /* Display screen specific information */
-  switch(state->screen)
+  /* The screen for brewing should show a counter instead of an icon */
+  if(state->screen == SCREEN_BREW)
   {
-    case SCREEN_WELCOME:
-      showScreenWelcome();
-      break;
-    case SCREEN_WARMUP:
-      showScreenWarmUp();
-      break;
-    case SCREEN_ESPRESSO:
-      showScreenEspresso();
-      break;
-    case SCREEN_HEATUP:
-      showScreenHeatUp();
-      break;
-    case SCREEN_STEAM:
-      showScreenSteam();
-      break;
-    case SCREEN_ERROR:
-      showScreenError();
-      break;
-    case SCREEN_BREW:
-      showScreenPump();
-      break;
-    case SCREEN_TOOCOLD:
-    case SCREEN_TOOHOT:
-      showScreenOverRange(state->screen);
-      break;
-    default:
-      break;
+    
   }
-
+  else
+  {
+    drawMainIcon(state);
+  }
+  
   uView.display();
 }
 
+
+/**
+ * Hook for the screen state machine. When screens change, this function gets called
+ * and can be used to determin the transaction (e.g. switch from screen A to screen B)
+ */
 void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
 {
-  
+  /* Every screen different from "brew" means the "shot is in idle" */
+  if(new_screen != SCREEN_BREW)
+  {
+    state->shot_state = SHOT_IDLE;
+  }
+  else
+  {
+    /* Going from "espresso" state to the "brew" state, so the shot started */
+    if(state->screen == SCREEN_ESPRESSO && new_screen == SCREEN_BREW)
+    {
+      /* Reset the brew time */
+      initTime(&state->brew_time);
+      state->brew_counter_delay = config.brew_counter_delay;
+      state->shot_state = SHOT_BREWING;
+    }
+    
+    /* Check the time and increment the shot counter when going 
+       from "brew" to some different state (like "espresso") */
+    if(state->screen == SCREEN_BREW && new_screen != SCREEN_BREW)
+    {
+      /* If the brew time exeeds a specific period, a shot was (probably) done */
+      if(timeInSeconds(&state->brew_time) >= config.shot_min_time)
+      {
+        /* Reset the time */
+        initTime(&state->brew_time);
+        /* Increment number of shots */
+        incrementShots(&state->shot_count);
+      }
+    }
+  }
   
   state->screen = new_screen;
 }
 
+
+/**
+ * This functions selects a screen depending on measured values like temperature
+ * or pump state
+ */
 void selectScreen(CURRENT_STATE *state)
 {
-  /*
-  if(state->screen != SCREEN_BREW)
-  {
-    state->shot_state = SHOT_IDLE;
-  }
-  */
-  
   /* Showing an error :( */
   if(state->error != ERROR_NONE)
   {
@@ -457,28 +490,28 @@ void selectScreen(CURRENT_STATE *state)
   }
 
   /* Not warming up, too cold, may be sensor fault? */
-  if(state->temperature < temp_config.warmup.min)
+  if(state->temperature < config.warmup.min)
   {
     state->range.min = 0;
-    state->range.max = temp_config.warmup.min;
+    state->range.max = config.warmup.min;
     changeScreen(state, SCREEN_TOOCOLD);
     return;
   }
 
   /* Warm up phase */
-  if(state->temperature >= temp_config.warmup.min &&
-     state->temperature < temp_config.warmup.max)
+  if(state->temperature >= config.warmup.min &&
+     state->temperature < config.warmup.max)
   {
-    copy_range(&temp_config.warmup, &state->range);
+    copy_range(&config.warmup, &state->range);
     changeScreen(state, SCREEN_WARMUP);
     return;
   }
 
   /* Making an espresso */
-  if(state->temperature >= temp_config.espresso.min &&
-     state->temperature < temp_config.espresso.max)
+  if(state->temperature >= config.espresso.min &&
+     state->temperature < config.espresso.max)
   {
-    copy_range(&temp_config.espresso, &state->range);
+    copy_range(&config.espresso, &state->range);
 
     if(state->pump)
     {
@@ -493,33 +526,36 @@ void selectScreen(CURRENT_STATE *state)
   }
 
   /* Heating up for steam */
-  if(state->temperature >= temp_config.espresso.max &&
-     state->temperature < temp_config.steam.min)
+  if(state->temperature >= config.espresso.max &&
+     state->temperature < config.steam.min)
   {
-    state->range.min = temp_config.espresso.max;
-    state->range.max = temp_config.steam.min;
-    state->screen = SCREEN_HEATUP;
+    state->range.min = config.espresso.max;
+    state->range.max = config.steam.min;
+    changeScreen(state, SCREEN_HEATUP);
     return;
   }
 
   /* Making steam */
-  if(state->temperature >= temp_config.steam.min &&
-     state->temperature < temp_config.max)
+  if(state->temperature >= config.steam.min &&
+     state->temperature < config.max)
   {
-    copy_range(&temp_config.steam, &state->range);
-    state->screen = SCREEN_STEAM;
+    copy_range(&config.steam, &state->range);
+    changeScreen(state, SCREEN_STEAM);
     return;
   }
 
   /* Getting too hot! */
-  if(state->temperature >= temp_config.max)
+  if(state->temperature >= config.max)
   {
-    copy_range(&temp_config.steam, &state->range);
-    state->screen = SCREEN_TOOHOT;
+    copy_range(&config.steam, &state->range);
+    changeScreen(state, SCREEN_TOOHOT);
     return;
   }
 }
 
+/**
+ * Function for reading the actual temperature value
+ */
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
   /* TODO: filter temperature values so they don't update to quickly */
@@ -533,7 +569,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   }
 
   /* Initialize the last value */
-  if(state->temperature < temp_config.warmup.min)
+  if(state->temperature < config.warmup.min)
   {
     state->temperature = state->temperature_fast;
   }
