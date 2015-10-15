@@ -388,7 +388,7 @@ void drawMainIcon(CURRENT_STATE *state)
   POINT origin;
   
   unsigned char icon_height = 20;
-  unsigned char icon_width = 20;
+  unsigned char icon_width = 26;
   
   origin.x = SCREEN_WIDTH / 4 - icon_width / 2;
   origin.y = SCREEN_HEIGHT / 2 - icon_height / 2;
