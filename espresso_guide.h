@@ -48,7 +48,8 @@ typedef struct __temp_config_data
   RANGE steam;
   double max;
   unsigned int shot_min_time;
-  unsigned char brew_count_delay;
+  unsigned char brew_counter_delay;
+  double trend_delta;
 } CONFIG;
 
 typedef struct __time
@@ -66,17 +67,19 @@ typedef struct __point
 
 typedef struct __current_state
 {
-  /* unfiltered temperature value */
+  /* Unfiltered temperature value */
   double temperature_fast;
-  /* filtered, slow temperature value */
+  /* Filtered, slow temperature value */
   double temperature;
-  /* pump state (1 = on, 0 = off) */
+  /* last temperature value */
+  double last_temperature;
+  /* Pump state (1 = on, 0 = off) */
   unsigned char pump;
-  /* temperature range for display */
+  /* Temperature range for display */
   RANGE range;
-  /* current error */
+  /* Current error */
   ERROR_TYPE error;
-  /* current screen */
+  /* Current screen */
   SCREEN_TYPE screen;
   /* Number of shots */
   unsigned int shot_count;
@@ -90,6 +93,8 @@ typedef struct __current_state
   unsigned char brew_counter_delay;
   /* Temperature trend (-1, 0, 1) */
   int temp_trend;
+  /* Counter for blinking animation */
+  unsigned char blink_counter;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);

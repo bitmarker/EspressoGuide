@@ -37,7 +37,7 @@ ISR(TIMER1_COMPA_vect)
   for(i = 0; i < MAX_COUNTERS; i++)
   {
     /* Check if the callback function is set */
-    if(counters[i].callback != 0)
+    if(counters[i].callback != 0 && counters[i].elapsed != 1)
     {
       /* Increment the counter */
       counters[i].count++;
@@ -156,8 +156,8 @@ void executeCounters(CURRENT_STATE *state)
   {
     if(counters[i].elapsed && counters[i].callback != 0)
     {
-      counters[i].callback(state);
       counters[i].elapsed = 0;
+      counters[i].callback(state);
     }
   }
 }
@@ -192,7 +192,10 @@ void setupConfig()
   config.shot_min_time = 15;
 
   /* Delay in seconds before the brew counter starts counting */
-  config.brew_count_delay = 2;
+  config.brew_counter_delay = 2;
+
+  /* Temperature delta threshold */
+  config.trend_delta = 0.1;
 }
 
 void drawTopBar(TIME *t, unsigned int shot_count)
@@ -210,7 +213,7 @@ void drawTopBar(TIME *t, unsigned int shot_count)
   bottom_right.x = bottom_left.x + SCREEN_WIDTH;
   bottom_right.y = bottom_left.y;
 
-  uView.line(bottom_left.x, bottom_left.y, bottom_right.x, bottom_left.y);
+  uView.line(bottom_left.x, bottom_left.y + 1, bottom_right.x, bottom_left.y + 1);
 
   uView.setCursor(bottom_left.x, bottom_left.y - uView.getFontHeight());
 
@@ -239,13 +242,13 @@ void drawBottomBar(unsigned int from, unsigned int to, float percentage)
   top_right.x = top_left.x + SCREEN_WIDTH;
   top_right.y = top_left.y;
 
-  uView.line(top_left.x, top_left.y, top_right.x, top_left.y);
+  uView.line(top_left.x, top_left.y - 1, top_right.x, top_left.y - 1);
 
   sprintf(buffer, "%d", from);
 
   from_left.x = 0;
   from_left.y = top_left.y + 2;
-  from_right.x = uView.getFontWidth() * getInt16PrintLen(from);
+  from_right.x = (uView.getFontWidth() + 1) * getInt16PrintLen(from);
   from_right.y = from_left.y;
 
   /* Draw the "from" value */
@@ -262,8 +265,8 @@ void drawBottomBar(unsigned int from, unsigned int to, float percentage)
   uView.setCursor(to_left.x, to_left.y);
   uView.print(buffer);
 
-  int left = from_right.x + 3;
-  int width = to_left.x - from_right.x - 5;
+  int left = from_right.x + 1;
+  int width = to_left.x - from_right.x - 4;
   int height = uView.getFontHeight() - 1;
 
   if(percentage > 1)
@@ -276,8 +279,26 @@ void drawBottomBar(unsigned int from, unsigned int to, float percentage)
     percentage = 0;
   }
 
-  uView.rect(left, from_right.y, width, height);
-  uView.rectFill(left, from_right.y, (int)(width * percentage), height);
+  uView.rect(left, from_right.y, width + 1, height);
+  
+  uView.line(left + (int)(width * percentage), from_right.y, left + (int)(width * percentage), from_right.y + height);
+
+  /* Fill the rect's each second pixel */
+  for(int x = 0; x < (int)(width * percentage); x += 2)
+  {
+    for(int y = 0; y < height; y += 2)
+    {
+      uView.pixel(left + x, from_right.y + y);
+    }
+  }
+
+  /* Draw black pixels to make the rect's corners look round */
+  uView.setColor(BLACK);
+  uView.pixel(left, from_right.y);
+  uView.pixel(left + width, from_right.y);
+  uView.pixel(left, from_right.y + height - 1);
+  uView.pixel(left + width, from_right.y + height - 1);
+  uView.setColor(WHITE);
 }
 
 /* Initializing the display */
@@ -320,6 +341,16 @@ void updateClock(CURRENT_STATE *state)
   }
 }
 
+void updateAuxCounters(CURRENT_STATE *state)
+{
+  state->blink_counter++;
+  
+  if(state->blink_counter >= 4)
+  {
+    state->blink_counter = 0;
+  }
+}
+
 void setupCounters()
 {
   int i;
@@ -333,10 +364,11 @@ void setupCounters()
 
   i = 0;
   
-  initCounter(&counters[i++], 500, updateCurrentTemperature);
-  initCounter(&counters[i++], 500, selectScreen);
-  initCounter(&counters[i++], 1000, updateClock);
-  initCounter(&counters[i++], 500, updateDisplay);
+  initCounter(&counters[0], 500, updateCurrentTemperature);
+  initCounter(&counters[1], 500, selectScreen);
+  initCounter(&counters[2], 1000, updateClock);
+  initCounter(&counters[3], 250, updateAuxCounters);
+  initCounter(&counters[4], 250, updateDisplay);
 }
 
 void setup()
@@ -349,20 +381,21 @@ void setup()
   setupTimer();
 }
 
+int z = 0;
+
 void drawMainIcon(CURRENT_STATE *state)
 {
   POINT origin;
   
-  unsigned char icon_height = 30;
-  unsigned char icon_width = SCREEN_WIDTH / 4;
-  
+  unsigned char icon_height = 20;
+  unsigned char icon_width = 20;
   
   origin.x = SCREEN_WIDTH / 4 - icon_width / 2;
   origin.y = SCREEN_HEIGHT / 2 - icon_height / 2;
 
   uView.rect(origin.x, origin.y, icon_width, icon_height);
 
-  uView.setCursor(origin.x, origin.y);
+  uView.setCursor(origin.x + 2, origin.y + 2);
   uView.print(state->screen);
 }
 
@@ -372,7 +405,7 @@ void drawTrendArrow(unsigned char rising, unsigned int y_origin)
   unsigned int height = 5;
   int y;
   
-  pos.y += y_origin + (rising ? (-1 * (height) - 2) : (uView.getFontHeight()) + 2);
+  pos.y += y_origin + (rising ? (-1 * (height) - 3) : (uView.getFontHeight()) + 3);
   
   for(y = 0; y < height; y++)
   {
@@ -390,6 +423,8 @@ void drawTrendArrow(unsigned char rising, unsigned int y_origin)
 /* Function for outputting the data to the display */
 void updateDisplay(CURRENT_STATE *state)
 {
+  char temp[6];
+
   uView.clear(PAGE);
 
   /* Display the run time and shot counter */
@@ -409,22 +444,26 @@ void updateDisplay(CURRENT_STATE *state)
   uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
 
   /* Print out the temperature with one decimal place */
-  uView.print((int)(state->temperature_fast));
-  uView.print(".");
-  uView.print((int)((state->temperature_fast - (int)(state->temperature_fast)) * 10));
+  dtostrf(state->temperature_fast, 3, 1, temp);
+  uView.print(temp);
 
+  /* Draw the trend arrow to indicate the rising or falling temperature */
+  if(state->blink_counter < 1)
+  {
+    if(state->temp_trend > 0)
+    {
+      drawTrendArrow(1, temp_y);
+    } 
+    else if(state->temp_trend < 0)
+    {
+      drawTrendArrow(0, temp_y);
+    }
+  }
   
-  drawTrendArrow(0, temp_y);
-  drawTrendArrow(1, temp_y);
-  
-  /* TODO: change this */
-  uView.setCursor(0, SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2);
-  uView.print(state->screen);
-
   /* The screen for brewing should show a counter instead of an icon */
   if(state->screen == SCREEN_BREW)
   {
-    
+    /* TODO: draw the counter */
   }
   else
   {
@@ -466,6 +505,7 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
       {
         /* Reset the time */
         initTime(&state->brew_time);
+        
         /* Increment number of shots */
         incrementShots(&state->shot_count);
       }
@@ -561,12 +601,17 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   /* TODO: filter temperature values so they don't update to quickly */
 
   
-  double t = Serial.parseFloat();
+  static double t = 0;//Serial.parseFloat();
 
-  if(t > 0)
+  if(t > 250)
   {
-    state->temperature_fast = t;
+    t = 0;
+    //state->temperature_fast = t;
   }
+
+  t++;
+
+  state->temperature_fast = t;
 
   /* Initialize the last value */
   if(state->temperature < config.warmup.min)
@@ -574,10 +619,25 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     state->temperature = state->temperature_fast;
   }
 
-  state->temperature = state->temperature_fast;
+  double delta_t = state->temperature_fast - state->last_temperature;
+
+  if(delta_t > config.trend_delta)
+  {
+    state->temp_trend = 1;
+  }
+  else if(delta_t < -1 * config.trend_delta)
+  {
+    state->temp_trend = -1;
+  }
+  else
+  {
+    state->temp_trend = 0;
+  }
+
+  state->last_temperature = state->temperature_fast;
 
   /* Build the filtered value */
-  //state->temperature = (state->temperature_fast + state->temperature) / 2;
+  state->temperature = state->temperature_fast;//(state->temperature_fast + state->temperature) / 2;
 }
 
 void printOutDebug(CURRENT_STATE *state)
@@ -608,6 +668,5 @@ void printOutDebug(CURRENT_STATE *state)
 void loop()
 {
   executeCounters(&current_state);
-  delay(1);
 }
 
