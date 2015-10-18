@@ -4,11 +4,15 @@
 CONFIG config;
 CURRENT_STATE current_state;
 
-#define MAX_COUNTERS 5
+#define MAX_COUNTERS 6
+#define PIN_PUMP_MEAS A0
+
 ACTION_COUNTER counters[MAX_COUNTERS];
 
 int SCREEN_WIDTH = uView.getLCDWidth();
 int SCREEN_HEIGHT = uView.getLCDHeight();
+
+
 
 /**
  * Initializing the 1ms timer
@@ -195,10 +199,10 @@ void setupConfig()
   config.brew_counter_delay = 2;
 
   /* Temperature delta threshold */
-  config.trend_delta = 0.1;
+  config.trend_delta = 1;
 }
 
-void drawTopBar(TIME *t, unsigned int shot_count)
+void drawTopBar(CURRENT_STATE *state)
 {
   POINT top_left, bottom_left, bottom_right;
   
@@ -217,17 +221,27 @@ void drawTopBar(TIME *t, unsigned int shot_count)
 
   uView.setCursor(bottom_left.x, bottom_left.y - uView.getFontHeight());
 
-  formatTime(t, buffer);
+  formatTime(&state->run_time, buffer);
 
   /* Draw the time */
   uView.print(buffer);
 
-  /* Draw the shot counter */
-  if(shot_count > 0)
+  /* If the pump is on, show the symbol. Otherwise show the shot counter */
+  if(state->pump)
   {
-    sprintf(buffer, "%02d", shot_count);
     uView.setCursor(SCREEN_WIDTH - uView.getFontWidth() * 2 - 1, bottom_left.y - uView.getFontHeight());
-    uView.print(buffer);
+    /* TODO: draw icon */
+    uView.print("PM");
+  }
+  else
+  {
+    /* Draw the shot counter */
+    if(state->shot_count > 0)
+    {
+      sprintf(buffer, "%02d", state->shot_count);
+      uView.setCursor(SCREEN_WIDTH - uView.getFontWidth() * 2 - 1, bottom_left.y - uView.getFontHeight());
+      uView.print(buffer);
+    }
   }
 }
 
@@ -369,10 +383,18 @@ void setupCounters()
   initCounter(&counters[2], 1000, updateClock);
   initCounter(&counters[3], 250, updateAuxCounters);
   initCounter(&counters[4], 250, updateDisplay);
+  initCounter(&counters[5], 50, updatePumpState);
+}
+
+void setupPins()
+{
+  pinMode(PIN_PUMP_MEAS, INPUT);
+  pinMode(A1, INPUT);
 }
 
 void setup()
 {
+  setupPins();
   setupSerial();
   setupConfig();
   setupState();
@@ -397,6 +419,18 @@ void drawMainIcon(CURRENT_STATE *state)
 
   uView.setCursor(origin.x + 2, origin.y + 2);
   uView.print(state->screen);
+}
+
+void drawBrewCounter(CURRENT_STATE *state)
+{
+  POINT origin;
+  
+  origin.x = SCREEN_WIDTH / 4;
+  origin.y = SCREEN_HEIGHT / 2;
+
+
+  uView.setCursor(origin.x + 2, origin.y + 2);
+  uView.print(timeInSeconds(&state->brew_time));
 }
 
 void drawTrendArrow(unsigned char rising, unsigned int y_origin)
@@ -428,7 +462,7 @@ void updateDisplay(CURRENT_STATE *state)
   uView.clear(PAGE);
 
   /* Display the run time and shot counter */
-  drawTopBar(&state->run_time, state->shot_count);
+  drawTopBar(state);
 
   /* Calculate the percentage of the current temperature within the range  */
   float percentage = (state->temperature_fast - state->range.min)/(state->range.max - state->range.min);
@@ -463,7 +497,7 @@ void updateDisplay(CURRENT_STATE *state)
   /* The screen for brewing should show a counter instead of an icon */
   if(state->screen == SCREEN_BREW)
   {
-    /* TODO: draw the counter */
+    drawBrewCounter(state);
   }
   else
   {
@@ -483,6 +517,21 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
   /* Every screen different from "brew" means the "shot is in idle" */
   if(new_screen != SCREEN_BREW)
   {
+    /* Check the time and increment the shot counter when going 
+       from "brew" to some different state (like "espresso") */
+    if(state->screen == SCREEN_BREW)
+    {
+      /* If the brew time exeeds a specific period, a shot was (probably) done */
+      if(timeInSeconds(&state->brew_time) >= config.shot_min_time)
+      {
+        /* Reset the time */
+        initTime(&state->brew_time);
+        
+        /* Increment number of shots */
+        incrementShots(&state->shot_count);
+      }
+    }
+    
     state->shot_state = SHOT_IDLE;
   }
   else
@@ -496,20 +545,7 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
       state->shot_state = SHOT_BREWING;
     }
     
-    /* Check the time and increment the shot counter when going 
-       from "brew" to some different state (like "espresso") */
-    if(state->screen == SCREEN_BREW && new_screen != SCREEN_BREW)
-    {
-      /* If the brew time exeeds a specific period, a shot was (probably) done */
-      if(timeInSeconds(&state->brew_time) >= config.shot_min_time)
-      {
-        /* Reset the time */
-        initTime(&state->brew_time);
-        
-        /* Increment number of shots */
-        incrementShots(&state->shot_count);
-      }
-    }
+    
   }
   
   state->screen = new_screen;
@@ -593,6 +629,24 @@ void selectScreen(CURRENT_STATE *state)
   }
 }
 
+
+/**
+ * Function for reading the pump state
+ */
+void updatePumpState(CURRENT_STATE *state)
+{
+  int current_value = analogRead(PIN_PUMP_MEAS);
+
+  if(current_value > 512)
+  {
+    state->pump = 1;
+  }
+  else
+  {
+    state->pump = 0;
+  }
+}
+
 /**
  * Function for reading the actual temperature value
  */
@@ -601,16 +655,10 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   /* TODO: filter temperature values so they don't update to quickly */
 
   
-  static double t = 0;//Serial.parseFloat();
+  double t = (analogRead(A1)/1024.0*250.0);
 
-  if(t > 250)
-  {
-    t = 0;
-    //state->temperature_fast = t;
-  }
-
-  t++;
-
+  
+  
   state->temperature_fast = t;
 
   /* Initialize the last value */
