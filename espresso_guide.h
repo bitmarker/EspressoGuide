@@ -65,6 +65,12 @@ typedef struct __point
   unsigned int y;  
 } POINT;
 
+typedef struct __icon
+{
+  unsigned int *pixels;
+  unsigned int count;
+} ICON;
+
 typedef struct __current_state
 {
   /* Unfiltered temperature value */
@@ -107,5 +113,8 @@ typedef struct __action_counter
   ACTION_COUNTER_CALLBACK callback;
 } ACTION_COUNTER;
 
+#define SET_ICON(screen, icon)   \
+  icons[screen].pixels = icon; \
+  icons[screen].count = sizeof(icon) / sizeof(unsigned int);
 
 #endif
