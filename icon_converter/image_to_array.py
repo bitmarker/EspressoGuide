@@ -5,8 +5,8 @@ from os.path import basename
 #image_name = "../icons/espresso_mug.jpg"
 #image_name = "../icons/warmup.jpg"
 #image_name = "../icons/heatup.jpg"
-image_name = "../icons/pump.jpg"
-
+#image_name = "../icons/pump.jpg"
+image_name = "../icons/welcome.jpg"
 
 var_name = os.path.splitext(basename(image_name))[0]
 im = Image.open(image_name)
