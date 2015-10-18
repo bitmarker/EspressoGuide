@@ -47,6 +47,7 @@ typedef struct __temp_config_data
   RANGE espresso;
   RANGE steam;
   double max;
+  double min;
   unsigned int shot_min_time;
   unsigned char brew_counter_delay;
   double trend_delta;
@@ -67,7 +68,7 @@ typedef struct __point
 
 typedef struct __icon
 {
-  unsigned int *pixels;
+  const unsigned int *pixels;
   unsigned int count;
 } ICON;
 
@@ -101,6 +102,8 @@ typedef struct __current_state
   int temp_trend;
   /* Counter for blinking animation */
   unsigned char blink_counter;
+  /* Counter for the welcome screen */
+  unsigned char welcome_counter;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);

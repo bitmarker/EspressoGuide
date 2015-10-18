@@ -4,7 +4,8 @@ from os.path import basename
 
 #image_name = "../icons/espresso_mug.jpg"
 #image_name = "../icons/warmup.jpg"
-image_name = "../icons/heatup.jpg"
+#image_name = "../icons/heatup.jpg"
+image_name = "../icons/pump.jpg"
 
 
 var_name = os.path.splitext(basename(image_name))[0]
@@ -19,7 +20,7 @@ def is_white(pixel, threshold=200):
     else:
         return False
 
-output = "unsigned int icon_data_{0}[] = {{".format(var_name)
+output = "const unsigned int icon_data_{0}[] PROGMEM = {{".format(var_name)
 
 hex_data = []
 

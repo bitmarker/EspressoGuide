@@ -1,22 +1,37 @@
 #include "espresso_guide.h"
 #include <MicroView.h>
+#include <SPI.h>
+#include <Adafruit_MAX31855.h>
 
 CONFIG config;
 CURRENT_STATE current_state;
 
-#define MAX_ICONS 10
-#define MAX_COUNTERS 6
-#define PIN_PUMP_MEAS A0
+#define MAX_ICONS             10
+#define MAX_COUNTERS          6
+#define PIN_PUMP_MEAS         A0
+#define PIN_DO                3
+#define PIN_CS                6
+#define PIN_CLK               5
+#define WELCOME_SCREEN_DELAY  30
 
 ACTION_COUNTER counters[MAX_COUNTERS];
+
 ICON icons[MAX_ICONS];
 
 int SCREEN_WIDTH = uView.getLCDWidth();
 int SCREEN_HEIGHT = uView.getLCDHeight();
 
-unsigned int icon_data_espresso_mug[] = {0x0611, 0x0708, 0x0709, 0x070a, 0x070b, 0x0711, 0x0801, 0x0805, 0x0808, 0x080a, 0x080b, 0x080c, 0x080d, 0x0811, 0x0902, 0x0904, 0x0906, 0x0908, 0x0909, 0x090a, 0x090c, 0x090d, 0x090e, 0x0911, 0x0a03, 0x0a08, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0e, 0x0a0f, 0x0a11, 0x0b08, 0x0b09, 0x0b0a, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b11, 0x0c02, 0x0c05, 0x0c08, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0e, 0x0c0f, 0x0c11, 0x0d03, 0x0d04, 0x0d06, 0x0d08, 0x0d09, 0x0d0a, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d11, 0x0e08, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0e, 0x0e0f, 0x0e11, 0x0f01, 0x0f05, 0x0f08, 0x0f09, 0x0f0a, 0x0f0b, 0x0f0c, 0x0f0d, 0x0f0e, 0x0f0f, 0x0f11, 0x1002, 0x1004, 0x1006, 0x1008, 0x1009, 0x100a, 0x100b, 0x100c, 0x100d, 0x100e, 0x1011, 0x1103, 0x1108, 0x1109, 0x110a, 0x110b, 0x110c, 0x110d, 0x1111, 0x1208, 0x1209, 0x120a, 0x120b, 0x120c, 0x1211, 0x1308, 0x130c, 0x1311, 0x1408, 0x140c, 0x1509, 0x150a, 0x150b};
-unsigned int icon_data_warmup[] = {0x0309, 0x030f, 0x0408, 0x0409, 0x040e, 0x040f, 0x0507, 0x0508, 0x0509, 0x050d, 0x050e, 0x050f, 0x0606, 0x0607, 0x0608, 0x0609, 0x060c, 0x060d, 0x060e, 0x060f, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0806, 0x0807, 0x0808, 0x0809, 0x080c, 0x080d, 0x080e, 0x080f, 0x0907, 0x0908, 0x0909, 0x090d, 0x090e, 0x090f, 0x0a08, 0x0a09, 0x0a0e, 0x0a0f, 0x0b09, 0x0b0f, 0x0e09, 0x0e0a, 0x0e0f, 0x0f06, 0x0f09, 0x0f0a, 0x0f0b, 0x0f0c, 0x0f0f, 0x1005, 0x1007, 0x1009, 0x100a, 0x100b, 0x100c, 0x100d, 0x100f, 0x1109, 0x110a, 0x110b, 0x110c, 0x110d, 0x110f, 0x1206, 0x1209, 0x120a, 0x120b, 0x120c, 0x120d, 0x120f, 0x1305, 0x1307, 0x1309, 0x130a, 0x130b, 0x130c, 0x130d, 0x130f, 0x1409, 0x140a, 0x140b, 0x140c, 0x140f, 0x1509, 0x150a, 0x150b, 0x150f, 0x1609, 0x160b, 0x170a};
-unsigned int icon_data_heatup[] = {0x0309, 0x030f, 0x0408, 0x0409, 0x040e, 0x040f, 0x0507, 0x0508, 0x0509, 0x050d, 0x050e, 0x050f, 0x0606, 0x0607, 0x0608, 0x0609, 0x060c, 0x060d, 0x060e, 0x060f, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0806, 0x0807, 0x0808, 0x0809, 0x080c, 0x080d, 0x080e, 0x080f, 0x0907, 0x0908, 0x0909, 0x090d, 0x090e, 0x090f, 0x0a08, 0x0a09, 0x0a0e, 0x0a0f, 0x0b09, 0x0b0f, 0x0e0d, 0x0f0e, 0x100c, 0x100f, 0x1104, 0x1105, 0x1106, 0x1107, 0x1108, 0x1109, 0x110a, 0x110d, 0x110f, 0x1204, 0x1205, 0x1206, 0x1207, 0x1208, 0x1209, 0x120a, 0x120b, 0x120d, 0x120f, 0x1304, 0x1305, 0x1306, 0x1307, 0x1308, 0x1309, 0x130a, 0x130d, 0x130f, 0x140c, 0x140f, 0x150e, 0x160d};
+Adafruit_MAX31855 thermocouple(PIN_CLK, PIN_CS, PIN_DO);
+
+const unsigned int icon_data_espresso_mug[] PROGMEM = {0x0611, 0x0708, 0x0709, 0x070a, 0x070b, 0x0711, 0x0801, 0x0805, 0x0808, 0x080a, 0x080b, 0x080c, 0x080d, 0x0811, 0x0902, 0x0904, 0x0906, 0x0908, 0x0909, 0x090a, 0x090c, 0x090d, 0x090e, 0x0911, 0x0a03, 0x0a08, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0e, 0x0a0f, 0x0a11, 0x0b08, 0x0b09, 0x0b0a, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b11, 0x0c02, 0x0c05, 0x0c08, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0e, 0x0c0f, 0x0c11, 0x0d03, 0x0d04, 0x0d06, 0x0d08, 0x0d09, 0x0d0a, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d11, 0x0e08, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0e, 0x0e0f, 0x0e11, 0x0f01, 0x0f05, 0x0f08, 0x0f09, 0x0f0a, 0x0f0b, 0x0f0c, 0x0f0d, 0x0f0e, 0x0f0f, 0x0f11, 0x1002, 0x1004, 0x1006, 0x1008, 0x1009, 0x100a, 0x100b, 0x100c, 0x100d, 0x100e, 0x1011, 0x1103, 0x1108, 0x1109, 0x110a, 0x110b, 0x110c, 0x110d, 0x1111, 0x1208, 0x1209, 0x120a, 0x120b, 0x120c, 0x1211, 0x1308, 0x130c, 0x1311, 0x1408, 0x140c, 0x1509, 0x150a, 0x150b};
+const unsigned int icon_data_warmup[] PROGMEM = {0x0309, 0x030f, 0x0408, 0x0409, 0x040e, 0x040f, 0x0507, 0x0508, 0x0509, 0x050d, 0x050e, 0x050f, 0x0606, 0x0607, 0x0608, 0x0609, 0x060c, 0x060d, 0x060e, 0x060f, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0806, 0x0807, 0x0808, 0x0809, 0x080c, 0x080d, 0x080e, 0x080f, 0x0907, 0x0908, 0x0909, 0x090d, 0x090e, 0x090f, 0x0a08, 0x0a09, 0x0a0e, 0x0a0f, 0x0b09, 0x0b0f, 0x0e09, 0x0e0a, 0x0e0f, 0x0f06, 0x0f09, 0x0f0a, 0x0f0b, 0x0f0c, 0x0f0f, 0x1005, 0x1007, 0x1009, 0x100a, 0x100b, 0x100c, 0x100d, 0x100f, 0x1109, 0x110a, 0x110b, 0x110c, 0x110d, 0x110f, 0x1206, 0x1209, 0x120a, 0x120b, 0x120c, 0x120d, 0x120f, 0x1305, 0x1307, 0x1309, 0x130a, 0x130b, 0x130c, 0x130d, 0x130f, 0x1409, 0x140a, 0x140b, 0x140c, 0x140f, 0x1509, 0x150a, 0x150b, 0x150f, 0x1609, 0x160b, 0x170a};
+const unsigned int icon_data_heatup[] PROGMEM = {0x0309, 0x030f, 0x0408, 0x0409, 0x040e, 0x040f, 0x0507, 0x0508, 0x0509, 0x050d, 0x050e, 0x050f, 0x0606, 0x0607, 0x0608, 0x0609, 0x060c, 0x060d, 0x060e, 0x060f, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0806, 0x0807, 0x0808, 0x0809, 0x080c, 0x080d, 0x080e, 0x080f, 0x0907, 0x0908, 0x0909, 0x090d, 0x090e, 0x090f, 0x0a08, 0x0a09, 0x0a0e, 0x0a0f, 0x0b09, 0x0b0f, 0x0e0d, 0x0f0e, 0x100c, 0x100f, 0x1104, 0x1105, 0x1106, 0x1107, 0x1108, 0x1109, 0x110a, 0x110d, 0x110f, 0x1204, 0x1205, 0x1206, 0x1207, 0x1208, 0x1209, 0x120a, 0x120b, 0x120d, 0x120f, 0x1304, 0x1305, 0x1306, 0x1307, 0x1308, 0x1309, 0x130a, 0x130d, 0x130f, 0x140c, 0x140f, 0x150e, 0x160d};
+const unsigned int icon_data_pump[] PROGMEM = {0x0007, 0x0103, 0x0104, 0x0106, 0x0107, 0x0202, 0x0205, 0x0206, 0x0207, 0x0301, 0x0303, 0x0306, 0x0307, 0x0401, 0x0404, 0x0406, 0x0407, 0x0501, 0x0502, 0x0505, 0x0506, 0x0507, 0x0601, 0x0602, 0x0603, 0x0604, 0x0606, 0x0607, 0x0701, 0x0702, 0x0707};
+
+// welcome
+// toocold
+// toohot
+// steam
 
 
 /**
@@ -179,6 +194,9 @@ void copy_range(RANGE *from, RANGE *to)
 
 void setupConfig()
 {
+  /* Min temperature */
+  config.min = 1;
+  
   /* If the temperature is below cold start, the boiler is cold */
   config.warmup.min = 30.0;
   /* Lowest temperature edge, show the hedt up screen */
@@ -210,11 +228,12 @@ void setupConfig()
 void drawIcon(ICON *icon, unsigned int x, unsigned int y)
 {
   int i;
-
+  
   for(i = 0; i < icon->count; i++)
   {
-    int ix = (icon->pixels[i] >> 8) & 0x00FF;
-    int iy = icon->pixels[i] & 0x00FF;
+    unsigned int icon_data = pgm_read_word_near(icon->pixels + i);
+    int ix = (icon_data >> 8) & 0x00FF;
+    int iy = icon_data & 0x00FF;
     uView.pixel(x + ix, y + iy);
   }
 }
@@ -246,9 +265,12 @@ void drawTopBar(CURRENT_STATE *state)
   /* If the pump is on, show the symbol. Otherwise show the shot counter */
   if(state->pump)
   {
-    uView.setCursor(SCREEN_WIDTH - uView.getFontWidth() * 2 - 1, bottom_left.y - uView.getFontHeight());
-    /* TODO: draw icon */
-    uView.print("PM");
+    /* Let the icon blink when waiting for the brew counter delay  */
+    if((state->brew_counter_delay > 0 && state->blink_counter < 2)
+        || state->brew_counter_delay == 0)
+    {
+      drawIcon(&icons[SCREEN_BREW], SCREEN_WIDTH - 8, 0);
+    }
   }
   else
   {
@@ -347,6 +369,7 @@ void setupState()
   current_state.shot_count = 0;
   initTime(&current_state.run_time);
   initTime(&current_state.brew_time);
+  current_state.welcome_counter = WELCOME_SCREEN_DELAY;
 }
 
 void setupSerial()
@@ -369,6 +392,12 @@ void updateClock(CURRENT_STATE *state)
     {
       incrementSeconds(&state->brew_time);
     }
+  }
+
+  /* Count down the welcome counter */
+  if(state->welcome_counter > 0)
+  {
+    state->welcome_counter--;
   }
 }
 
@@ -421,6 +450,7 @@ void setupIcons()
   SET_ICON(SCREEN_ESPRESSO, icon_data_espresso_mug);
   SET_ICON(SCREEN_WARMUP, icon_data_warmup);
   SET_ICON(SCREEN_HEATUP, icon_data_heatup);
+  SET_ICON(SCREEN_BREW, icon_data_pump);
 }
 
 void setup()
@@ -453,13 +483,31 @@ void drawMainIcon(CURRENT_STATE *state)
 void drawBrewCounter(CURRENT_STATE *state)
 {
   POINT origin;
+  char buff[3];
+  int old_font;
   
   origin.x = SCREEN_WIDTH / 4;
-  origin.y = SCREEN_HEIGHT / 2;
+  origin.y = SCREEN_HEIGHT / 2 + 2;
 
+  old_font = uView.getFontType();
+  uView.setFontType(1);
 
-  uView.setCursor(origin.x + 2, origin.y + 2);
-  uView.print(timeInSeconds(&state->brew_time));
+  uView.setCursor(origin.x - uView.getFontWidth(), origin.y - uView.getFontHeight() / 2);
+  sprintf(buff, "%02d", state->brew_time.seconds);
+
+  /* Draw the brew counter with black color on white brackground */
+  uView.setColor(WHITE);
+  uView.rectFill(origin.x - uView.getFontWidth() - 3, origin.y - uView.getFontHeight() / 2 - 2, uView.getFontWidth() * 2 + 5, uView.getFontHeight());
+  uView.setColor(BLACK);
+  uView.print(buff);
+
+  /* Font fix: erasing two lines overlapping the background */
+  uView.lineH(origin.x - uView.getFontWidth() - 3, origin.y + uView.getFontHeight() / 2 - 2, uView.getFontWidth() * 2 + 5);
+  uView.lineH(origin.x - uView.getFontWidth() - 3, origin.y + uView.getFontHeight() / 2 - 1, uView.getFontWidth() * 2 + 5);
+  
+  uView.setColor(WHITE);
+
+  uView.setFontType(old_font);
 }
 
 void drawTrendArrow(unsigned char rising, unsigned int y_origin)
@@ -490,47 +538,67 @@ void updateDisplay(CURRENT_STATE *state)
 
   uView.clear(PAGE);
 
-  /* Display the run time and shot counter */
-  drawTopBar(state);
-
-  /* Calculate the percentage of the current temperature within the range  */
-  float percentage = (state->temperature_fast - state->range.min)/(state->range.max - state->range.min);
-
-  /* Display the current temperature range */
-  drawBottomBar((unsigned int)state->range.min, (unsigned int)state->range.max, percentage);
-
-  /* Display the current temperature */
-  int temp_width = (getInt16PrintLen((int)(state->temperature_fast)) + 2)*(uView.getFontWidth() + 1) + 1;
-  int temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
-
-  /* Move the cursor for drawing the temperature to the 3/4 of the screen */
-  uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
-
-  /* Print out the temperature with one decimal place */
-  dtostrf(state->temperature_fast, 3, 1, temp);
-  uView.print(temp);
-
-  /* Draw the trend arrow to indicate the rising or falling temperature */
-  if(state->blink_counter < 1)
+  if(state->screen == SCREEN_ERROR)
   {
-    if(state->temp_trend > 0)
+    uView.setCursor(0, 0);
+    switch(state->error)
     {
-      drawTrendArrow(1, temp_y);
-    } 
-    else if(state->temp_trend < 0)
-    {
-      drawTrendArrow(0, temp_y);
+      case ERROR_SENSOR:
+        uView.print("Sensor\nerror!");
+        break;
+      default:
+        uView.print("Unknown\nerror!");
     }
   }
-  
-  /* The screen for brewing should show a counter instead of an icon */
-  if(state->screen == SCREEN_BREW)
+  else if(state->screen == SCREEN_WELCOME)
   {
-    drawBrewCounter(state);
+    uView.setCursor(0, 0);
+    uView.print("Espresso\nGuide!");
   }
   else
   {
-    drawMainIcon(state);
+    /* Display the run time and shot counter */
+    drawTopBar(state);
+  
+    /* Calculate the percentage of the current temperature within the range  */
+    float percentage = (state->temperature_fast - state->range.min)/(state->range.max - state->range.min);
+  
+    /* Display the current temperature range */
+    drawBottomBar((unsigned int)state->range.min, (unsigned int)state->range.max, percentage);
+  
+    /* Display the current temperature */
+    int temp_width = (getInt16PrintLen((int)(state->temperature_fast)) + 2)*(uView.getFontWidth() + 1) + 1;
+    int temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
+  
+    /* Move the cursor for drawing the temperature to the 3/4 of the screen */
+    uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
+  
+    /* Print out the temperature with one decimal place */
+    dtostrf(state->temperature_fast, 3, 1, temp);
+    uView.print(temp);
+  
+    /* Draw the trend arrow to indicate the rising or falling temperature */
+    if(state->blink_counter < 1)
+    {
+      if(state->temp_trend > 0)
+      {
+        drawTrendArrow(1, temp_y);
+      } 
+      else if(state->temp_trend < 0)
+      {
+        drawTrendArrow(0, temp_y);
+      }
+    }
+    
+    /* The screen for brewing should show a counter instead of an icon */
+    if(state->screen == SCREEN_BREW)
+    {
+      drawBrewCounter(state);
+    }
+    else
+    {
+      drawMainIcon(state);
+    }
   }
   
   uView.display();
@@ -594,10 +662,16 @@ void selectScreen(CURRENT_STATE *state)
     return;
   }
 
+  if(state->welcome_counter > 0)
+  {
+    changeScreen(state, SCREEN_WELCOME);
+    return;
+  }
+
   /* Not warming up, too cold, may be sensor fault? */
   if(state->temperature < config.warmup.min)
   {
-    state->range.min = 0;
+    state->range.min = config.min;
     state->range.max = config.warmup.min;
     changeScreen(state, SCREEN_TOOCOLD);
     return;
@@ -686,7 +760,22 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   
   double t = (analogRead(A1)/1024.0*250.0);
 
+  if(t < 5.0)
+  {
+    t = thermocouple.readCelsius();
+  }
   
+
+  /* If the temperature is NaN or below one degree, set the error flag */
+  if(isnan(t) || t < config.min)
+  {
+    state->error = ERROR_SENSOR;
+    t = 0;
+  }
+  else
+  {
+    state->error = ERROR_NONE;
+  }
   
   state->temperature_fast = t;
 
@@ -745,5 +834,14 @@ void printOutDebug(CURRENT_STATE *state)
 void loop()
 {
   executeCounters(&current_state);
+  
+  if(current_state.error)
+  {
+    delay(1000);
+  }
+  else
+  {
+    delay(1);
+  }
 }
 

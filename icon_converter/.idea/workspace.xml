@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ce8e06bd-1195-421b-8663-66475d99c75b" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../EspressoGuide.ino" afterPath="$PROJECT_DIR$/../EspressoGuide.ino" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/../espresso_guide.h" afterPath="$PROJECT_DIR$/../espresso_guide.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/image_to_array.py" afterPath="$PROJECT_DIR$/image_to_array.py" />
     </list>
     <ignored path="icon_converter.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -30,8 +29,8 @@
       <file leaf-file-name="image_to_array.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/image_to_array.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.2278481" vertical-offset="0" max-vertical-offset="585">
-              <caret line="6" column="29" selection-start-line="6" selection-start-column="29" selection-end-line="6" selection-end-column="29" />
+            <state vertical-scroll-proportion="0.2658228" vertical-offset="0" max-vertical-offset="600">
+              <caret line="7" column="27" selection-start-line="7" selection-start-column="27" selection-end-line="7" selection-end-column="27" />
               <folding>
                 <element signature="e#0#21#0" expanded="true" />
               </folding>
@@ -329,8 +328,8 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/image_to_array.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.2278481" vertical-offset="0" max-vertical-offset="585">
-          <caret line="6" column="29" selection-start-line="6" selection-start-column="29" selection-end-line="6" selection-end-column="29" />
+        <state vertical-scroll-proportion="0.2658228" vertical-offset="0" max-vertical-offset="600">
+          <caret line="7" column="27" selection-start-line="7" selection-start-column="27" selection-end-line="7" selection-end-column="27" />
           <folding>
             <element signature="e#0#21#0" expanded="true" />
           </folding>
