@@ -1,6 +1,8 @@
 #ifndef __ESPRESSO_GUIDE_H_
 #define __ESPRESSO_GUIDE_H_
 
+#define MEAS_DATA_MAXLEN 8
+
 typedef enum __screen_type
 {
   /* 0: Welcome screen shows at the startup */
@@ -50,7 +52,7 @@ typedef struct __temp_config_data
   double min;
   unsigned int shot_min_time;
   unsigned char brew_counter_delay;
-  double trend_delta;
+  double slope_delta;
 } CONFIG;
 
 typedef struct __time
@@ -71,6 +73,16 @@ typedef struct __icon
   const unsigned int *pixels;
   unsigned int count;
 } ICON;
+
+typedef struct __meas_data
+{
+    double values[MEAS_DATA_MAXLEN];
+    unsigned int length;
+    double average;
+    unsigned char full;
+    double last_sum;
+    double slope;
+} MEAS_DATA;
 
 typedef struct __current_state
 {
@@ -104,6 +116,8 @@ typedef struct __current_state
   unsigned char blink_counter;
   /* Counter for the welcome screen */
   unsigned char welcome_counter;
+  /* Temperature data */
+  MEAS_DATA temp_data;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);
@@ -119,7 +133,5 @@ typedef struct __action_counter
 #define SET_ICON(screen, icon)   \
   icons[screen].pixels = icon; \
   icons[screen].count = sizeof(icon) / sizeof(unsigned int);
-
-
 
 #endif

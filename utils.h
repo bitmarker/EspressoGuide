@@ -13,6 +13,8 @@ void incrementSeconds(TIME *t);
 unsigned long timeInSeconds(TIME *t);
 void initCounter(ACTION_COUNTER *counter, unsigned int interval, ACTION_COUNTER_CALLBACK callback);
 void copy_range(RANGE *from, RANGE *to);
+void addNextValue(MEAS_DATA *data, double value);
+void initMeasData(MEAS_DATA *data);
 
 #ifdef __cplusplus
 }

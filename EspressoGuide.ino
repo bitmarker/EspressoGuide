@@ -5,15 +5,6 @@
 #include "images.h"
 #include "utils.h"
 
-/**
- * LOP
- * 
- * + Calculate the mean value based on last n values
- * + Calculate the trend based on last n values
- * + Save the current time every x seconds and load it if the espresso maker is warm
- * 
- */
-
 CONFIG config;
 CURRENT_STATE current_state;
 
@@ -26,7 +17,6 @@ CURRENT_STATE current_state;
 #define WELCOME_SCREEN_DELAY  3
 
 ACTION_COUNTER counters[MAX_COUNTERS];
-
 ICON icons[MAX_ICONS];
 
 int SCREEN_WIDTH = uView.getLCDWidth();
@@ -65,7 +55,7 @@ void setupConfig()
   config.brew_counter_delay = 2;
 
   /* Temperature delta threshold */
-  config.trend_delta = 0.5;
+  config.slope_delta = 0.03;
 }
 
 
@@ -292,6 +282,7 @@ void setupState()
   initTime(&current_state.run_time);
   initTime(&current_state.brew_time);
   current_state.welcome_counter = WELCOME_SCREEN_DELAY;
+  initMeasData(&current_state.temp_data);
 }
 
 void setupSerial()
@@ -705,15 +696,25 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     state->temperature_fast = t;
   }
 
-  /* Initialize the last value */
-  if(state->temperature < config.warmup.min)
-  {
-    state->temperature = state->temperature_fast;
-  }
-
+  addNextValue(&state->temp_data, state->temperature_fast);
 
   /* Build the filtered value */
-  state->temperature = state->temperature_fast;
+  state->temperature = state->temp_data.average;
+
+  Serial.print("S: "); Serial.println(state->temp_data.slope);
+
+  if(state->temp_data.slope > config.slope_delta)
+  {
+    state->temp_trend = 1;
+  }
+  else if(state->temp_data.slope < -1 * config.slope_delta)
+  {
+    state->temp_trend = -1;
+  }
+  else
+  {
+    state->temp_trend = 0;
+  }
 }
 
 void loop()
