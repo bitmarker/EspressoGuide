@@ -5,6 +5,14 @@
 #include "images.h"
 #include "utils.h"
 
+/**
+ * LOP
+ * 
+ * + Error Counter. Show error only when count reached some level
+ */
+
+
+
 CONFIG config;
 CURRENT_STATE current_state;
 
@@ -32,13 +40,13 @@ void setupConfig()
   
   /* If the temperature is below cold start, the boiler is cold */
   config.warmup.min = 30.0;
-  /* Lowest temperature edge, show the hedt up screen */
+  /* Lowest temperature edge, show the heat up screen */
   config.warmup.max = 80.0;
   
   /* Lowest point of the espresso thermostat */
-  config.espresso.min = 80.0;
+  config.espresso.min = config.warmup.max;
   /* Highest point of the espresso thermostat */
-  config.espresso.max = 105.0;
+  config.espresso.max = 115.0;
 
   /* Lowest point of the steam thermostat */
   config.steam.min = 150.0;
@@ -666,11 +674,11 @@ void updatePumpState(CURRENT_STATE *state)
 
   if(current_value > 512)
   {
-    state->pump = 1;
+    //state->pump = 1;
   }
   else
   {
-    state->pump = 0;
+    //state->pump = 0;
   }
 }
 
