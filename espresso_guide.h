@@ -135,3 +135,4 @@ typedef struct __action_counter
   icons[screen].count = sizeof(icon) / sizeof(unsigned int);
 
 #endif
+

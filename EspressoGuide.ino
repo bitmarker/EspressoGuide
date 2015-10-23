@@ -1,3 +1,4 @@
+#include "at_parser.h"
 #include "espresso_guide.h"
 #include <MicroView.h>
 /*#include <SPI.h>*/
@@ -11,9 +12,8 @@
  * 
  * + Use different type of sensor for temperature
  * + Error Counter. Show error only when count reached some level
+ * + Saving config data to eeprom
  */
-
-
 
 CONFIG config;
 CURRENT_STATE current_state;
@@ -25,6 +25,8 @@ CURRENT_STATE current_state;
 #define PIN_CS                6
 #define PIN_CLK               5
 #define WELCOME_SCREEN_DELAY  3
+
+#define DEVICE_DESCRIPTION "EspressoGuide v0.0.1"
 
 ACTION_COUNTER counters[MAX_COUNTERS];
 ICON icons[MAX_ICONS];
@@ -392,11 +394,82 @@ void setupIcons()
   SET_ICON(SCREEN_TOOHOT, icon_data_toohot);
 }
 
+ 
+char getEspressoMin(char *value)
+{
+  sprintf(value, "%d", (int)config.espresso.min);
+  return AT_OK;
+}
+
+char setEspressoMin(char *value)
+{
+  config.espresso.min = atoi(value);
+  return AT_OK;
+}
+
+char getEspressoMax(char *value)
+{
+  sprintf(value, "%d", (int)config.espresso.max);
+  return AT_OK;
+}
+
+char setEspressoMax(char *value)
+{
+  config.espresso.max = atoi(value);
+  return AT_OK;
+}
+
+char getSteamMin(char *value)
+{
+  sprintf(value, "%d", (int)config.steam.min);
+  return AT_OK;
+}
+
+char setSteamMin(char *value)
+{
+  config.steam.min = atoi(value);
+  return AT_OK;
+}
+
+char getSteamMax(char *value)
+{
+  sprintf(value, "%d", (int)config.steam.max);
+  return AT_OK;
+}
+
+char setSteamMax(char *value)
+{
+  config.steam.max = atoi(value);
+  return AT_OK;
+}
+
+char getCounterDelay(char *value)
+{
+  sprintf(value, "%d", (int)config.brew_counter_delay);
+  return AT_OK;
+}
+
+char setCounterDelay(char *value)
+{
+  config.brew_counter_delay = atoi(value);
+  return AT_OK;
+}
+
+void setupAtCommands()
+{
+   at_register_command((string_t)"EMIN", (at_callback)getEspressoMin, (at_callback)setEspressoMin, 0, 0);
+   at_register_command((string_t)"EMAX", (at_callback)getEspressoMax, (at_callback)setEspressoMax, 0, 0);
+   at_register_command((string_t)"SMIN", (at_callback)getSteamMin, (at_callback)setSteamMin, 0, 0);
+   at_register_command((string_t)"SMAX", (at_callback)getSteamMax, (at_callback)setSteamMax, 0, 0);
+   at_register_command((string_t)"CNDL", (at_callback)getCounterDelay, (at_callback)setCounterDelay, 0, 0);
+}
+
 void setup()
 {
   setupIcons();
   setupPins();
   setupSerial();
+  setupAtCommands();
   setupConfig();
   setupState();
   setupDisplay();
@@ -507,7 +580,7 @@ void updateDisplay(CURRENT_STATE *state)
     /* Display the run time and shot counter */
     drawTopBar(state);
 
-    double temperature = state->temperature;
+    double temperature = state->temperature_fast;
   
     /* Calculate the percentage of the current temperature within the range  */
     float percentage = (temperature - state->range.min)/(state->range.max - state->range.min);
@@ -730,17 +803,72 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   }
 }
 
+
+void processAtCommands()
+{
+  static String readString = "";
+  char ret[50];
+  char res;
+
+  while (Serial.available())
+  {
+    if (Serial.available() > 0)
+    {
+      // Get a byte from buffer
+      char c = Serial.read();
+
+      readString += c;
+
+      // Input is too long
+      if (readString.length() > AT_MAX_TEMP_STRING)
+      {
+        Serial.println(AT_ERROR_STRING);
+        readString = "";
+      }
+      else
+      {
+        if (c == '\r' || c == ';')
+        {
+          readString.trim();
+
+          // Simple echo
+          if (readString == "AT")
+          {
+            Serial.println(DEVICE_DESCRIPTION);
+            Serial.println(AT_OK_STRING);
+            readString = "";
+          }
+          else
+          {
+            // Parsing the command
+            res = at_parse_line((string_t)readString.c_str(), (unsigned char*)ret);
+
+            readString = "";
+
+            if (res == AT_OK)
+            {
+              if (ms_strlen((string_t)ret) > 0)
+              {
+                String s_ret(ret);
+                Serial.println(s_ret);
+              }
+              Serial.println(AT_OK_STRING);
+            }
+            else
+            {
+              Serial.println(AT_ERROR_STRING);
+            }
+          }
+        }
+      }
+    } // end serial available
+  } // end while
+}
+
 void loop()
 {
   executeCounters(&current_state);
-  
-  if(current_state.error)
-  {
-    delay(1000);
-  }
-  else
-  {
-    delay(1);
-  }
+  processAtCommands();
+  delay(1);
 }
 
