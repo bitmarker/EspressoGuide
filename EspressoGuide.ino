@@ -1,13 +1,15 @@
 #include "espresso_guide.h"
 #include <MicroView.h>
-#include <SPI.h>
-#include <Adafruit_MAX31855.h>
+/*#include <SPI.h>*/
+/*#include <Adafruit_MAX31855.h>*/
 #include "images.h"
 #include "utils.h"
+
 
 /**
  * LOP
  * 
+ * + Use different type of sensor for temperature
  * + Error Counter. Show error only when count reached some level
  */
 
@@ -30,8 +32,25 @@ ICON icons[MAX_ICONS];
 int SCREEN_WIDTH = uView.getLCDWidth();
 int SCREEN_HEIGHT = uView.getLCDHeight();
 
-Adafruit_MAX31855 thermocouple(PIN_CLK, PIN_CS, PIN_DO);
+/* DEPRECATED */
+/* Adafruit_MAX31855 thermocouple(PIN_CLK, PIN_CS, PIN_DO); */
+/* DEPRECATED */
 
+
+void setupPins()
+{
+  pinMode(PIN_PUMP_MEAS, INPUT);
+}
+
+unsigned char measurePumpState()
+{
+  return analogRead(PIN_PUMP_MEAS) > 512;
+}
+
+double measureMainTemperature()
+{
+  return analogRead(A1) / 1024.0 * 300.0;
+}
 
 void setupConfig()
 {
@@ -350,14 +369,9 @@ void setupCounters()
   initCounter(&counters[2], 1000, updateClock);
   initCounter(&counters[3], 250, updateAuxCounters);
   initCounter(&counters[4], 250, updateDisplay);
-  initCounter(&counters[5], 50, updatePumpState);
+  initCounter(&counters[5], 500, updatePumpState);
 }
 
-
-void setupPins()
-{
-  pinMode(PIN_PUMP_MEAS, INPUT);
-}
 
 
 void setupIcons()
@@ -492,22 +506,24 @@ void updateDisplay(CURRENT_STATE *state)
   {
     /* Display the run time and shot counter */
     drawTopBar(state);
+
+    double temperature = state->temperature;
   
     /* Calculate the percentage of the current temperature within the range  */
-    float percentage = (state->temperature_fast - state->range.min)/(state->range.max - state->range.min);
+    float percentage = (temperature - state->range.min)/(state->range.max - state->range.min);
   
     /* Display the current temperature range */
     drawBottomBar((unsigned int)state->range.min, (unsigned int)state->range.max, percentage);
   
     /* Display the current temperature */
-    int temp_width = (getInt16PrintLen((int)(state->temperature_fast)) + 2)*(uView.getFontWidth() + 1) + 1;
+    int temp_width = (getInt16PrintLen((int)(temperature)) + 2)*(uView.getFontWidth() + 1) + 1;
     int temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
   
     /* Move the cursor for drawing the temperature to the 3/4 of the screen */
     uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
   
     /* Print out the temperature with one decimal place */
-    dtostrf(state->temperature_fast, 3, 1, temp);
+    dtostrf(temperature, 3, 1, temp);
     uView.print(temp);
   
     /* Draw the trend arrow to indicate the rising or falling temperature */
@@ -664,22 +680,13 @@ void selectScreen(CURRENT_STATE *state)
   }
 }
 
-
 /**
  * Function for reading the pump state
  */
 void updatePumpState(CURRENT_STATE *state)
 {
-  int current_value = analogRead(PIN_PUMP_MEAS);
-
-  if(current_value > 512)
-  {
-    //state->pump = 1;
-  }
-  else
-  {
-    //state->pump = 0;
-  }
+  /* TODO: add some filtering here... */
+  state->pump = measurePumpState();
 }
 
 /**
@@ -687,12 +694,10 @@ void updatePumpState(CURRENT_STATE *state)
  */
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
-  /* TODO: filter temperature values so they don't update to quickly */
+  double t = measureMainTemperature();
 
-  double t = thermocouple.readCelsius();
-
-  /* If the temperature is NaN or below one degree, set the error flag */
-  if(isnan(t))
+  /* If the temperature is NaN or zero, set the error flag */
+  if(isnan(t) || t < 0.1)
   {
     state->error = ERROR_SENSOR;
     t = 0;
@@ -704,13 +709,13 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     state->temperature_fast = t;
   }
 
+  /* Add the value to the last measurements buffer and calculate the linearization */
   addNextValue(&state->temp_data, state->temperature_fast);
 
   /* Build the filtered value */
   state->temperature = state->temp_data.average;
 
-  Serial.print("S: "); Serial.println(state->temp_data.slope);
-
+  /* Set the trend value corresponding to the slope */
   if(state->temp_data.slope > config.slope_delta)
   {
     state->temp_trend = 1;
