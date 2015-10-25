@@ -1,6 +1,7 @@
 #ifndef __ESPRESSO_GUIDE_H_
 #define __ESPRESSO_GUIDE_H_
 
+
 #define MEAS_DATA_MAXLEN 8
 
 typedef enum __screen_type

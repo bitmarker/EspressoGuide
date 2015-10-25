@@ -1,11 +1,14 @@
+#include "utils.h"
 #include "at_parser.h"
 #include "espresso_guide.h"
 #include <MicroView.h>
 /*#include <SPI.h>*/
 /*#include <Adafruit_MAX31855.h>*/
 #include "images.h"
-#include "utils.h"
+#include <EEPROM.h>
+#include <TSIC.h>
 
+#define printv(name) Serial.print(#name); Serial.print(": "); Serial.println(name);
 
 /**
  * LOP
@@ -31,31 +34,55 @@ CURRENT_STATE current_state;
 ACTION_COUNTER counters[MAX_COUNTERS];
 ICON icons[MAX_ICONS];
 
-int SCREEN_WIDTH = uView.getLCDWidth();
-int SCREEN_HEIGHT = uView.getLCDHeight();
+uint16_t SCREEN_WIDTH = uView.getLCDWidth();
+uint16_t SCREEN_HEIGHT = uView.getLCDHeight();
 
 /* DEPRECATED */
 /* Adafruit_MAX31855 thermocouple(PIN_CLK, PIN_CS, PIN_DO); */
 /* DEPRECATED */
 
+TSIC mainTempSensor(4, 2);
 
 void setupPins()
 {
   pinMode(PIN_PUMP_MEAS, INPUT);
 }
 
-unsigned char measurePumpState()
+byte measurePumpState()
 {
   return analogRead(PIN_PUMP_MEAS) > 512;
 }
 
 double measureMainTemperature()
 {
+  /*
+  uint16_t temp_raw;
+  double temp;
+  
+  if(mainTempSensor.getTemperature(&temp_raw))
+  {
+    Serial.print("uint_16: ");
+    Serial.println(temp_raw);
+    temp = mainTempSensor.calc_Celsius(&temp_raw);
+    Serial.print("Temperature: ");
+    Serial.print(temp);
+    Serial.println(" °C");
+  }
+  */
+  
   return analogRead(A1) / 1024.0 * 300.0;
 }
 
 void setupConfig()
 {
+  loadConfigFromEeprom();
+
+  /* Check if eeprom contains valid data if return if it so */
+  if(config.min > 0 && config.max > 0 && config.slope_delta > 0)
+  {
+    return;
+  }
+  
   /* Min temperature */
   config.min = 1;
   
@@ -87,6 +114,25 @@ void setupConfig()
   config.slope_delta = 0.03;
 }
 
+void loadConfigFromEeprom()
+{
+  EEPROM.get(0, config);
+
+  Serial.println(DEVICE_DESCRIPTION);
+  
+  printv(config.min);
+  printv(config.max);
+  printv(config.espresso.min);
+  printv(config.espresso.max);
+  printv(config.steam.min);
+  printv(config.steam.max);
+  printv(config.brew_counter_delay);
+}
+
+void saveConfigToEeprom()
+{
+  EEPROM.put(0, config);
+}
 
 /**
  * Initializing the 1ms timer
@@ -111,7 +157,7 @@ void setupTimer()
  */
 ISR(TIMER1_COMPA_vect)
 {
-  int i;
+  uint16_t i;
   for(i = 0; i < MAX_COUNTERS; i++)
   {
     /* Check if the callback function is set */
@@ -136,7 +182,7 @@ ISR(TIMER1_COMPA_vect)
 /**
  * Increments the shot counter. If the count is greater than 99 reset the counter
  */
-void incrementShots(unsigned int *shot_count)
+void incrementShots(uint16_t *shot_count)
 {
   (*shot_count)++;
   
@@ -153,7 +199,7 @@ void incrementShots(unsigned int *shot_count)
  */
 void executeCounters(CURRENT_STATE *state)
 {
-  int i;
+  uint16_t i;
   for(i = 0; i < MAX_COUNTERS; i++)
   {
     if(counters[i].elapsed && counters[i].callback != 0)
@@ -164,13 +210,13 @@ void executeCounters(CURRENT_STATE *state)
   }
 }
 
-void drawIcon(ICON *icon, unsigned int x, unsigned int y)
+void drawIcon(ICON *icon, uint16_t x, uint16_t y)
 {
-  int i;
+  uint16_t i;
   
   for(i = 0; i < icon->count; i++)
   {
-    unsigned int icon_data = pgm_read_word_near(icon->pixels + i);
+    uint16_t icon_data = pgm_read_word_near(icon->pixels + i);
     int ix = (icon_data >> 8) & 0x00FF;
     int iy = icon_data & 0x00FF;
     uView.pixel(x + ix, y + iy);
@@ -224,7 +270,7 @@ void drawTopBar(CURRENT_STATE *state)
 }
 
 
-void drawBottomBar(unsigned int from, unsigned int to, float percentage)
+void drawBottomBar(uint16_t from, uint16_t to, double percentage)
 {
   POINT top_left, top_right, from_left, from_right, to_left, to_right;
   char buffer[5];
@@ -278,7 +324,7 @@ void drawBottomBar(unsigned int from, unsigned int to, float percentage)
   uView.line(left + (int)(width * percentage), from_right.y, left + (int)(width * percentage), from_right.y + height);
 
   /* Fill the rect's each second pixel */
-  for(int x = 0; x < (int)(width * percentage); x += 2)
+  for(uint16_t x = 0; x < (int)(width * percentage); x += 2)
   {
     for(int y = 0; y < height; y += 2)
     {
@@ -404,6 +450,7 @@ char getEspressoMin(char *value)
 char setEspressoMin(char *value)
 {
   config.espresso.min = atoi(value);
+  saveConfigToEeprom();
   return AT_OK;
 }
 
@@ -416,6 +463,7 @@ char getEspressoMax(char *value)
 char setEspressoMax(char *value)
 {
   config.espresso.max = atoi(value);
+  saveConfigToEeprom();
   return AT_OK;
 }
 
@@ -428,6 +476,7 @@ char getSteamMin(char *value)
 char setSteamMin(char *value)
 {
   config.steam.min = atoi(value);
+  saveConfigToEeprom();
   return AT_OK;
 }
 
@@ -440,6 +489,7 @@ char getSteamMax(char *value)
 char setSteamMax(char *value)
 {
   config.steam.max = atoi(value);
+  saveConfigToEeprom();
   return AT_OK;
 }
 
@@ -452,6 +502,7 @@ char getCounterDelay(char *value)
 char setCounterDelay(char *value)
 {
   config.brew_counter_delay = atoi(value);
+  saveConfigToEeprom();
   return AT_OK;
 }
 
@@ -485,8 +536,8 @@ void drawMainIcon(CURRENT_STATE *state)
 {
   POINT origin;
   
-  unsigned char icon_height = 20;
-  unsigned char icon_width = 26;
+  byte icon_height = 20;
+  byte icon_width = 26;
   
   origin.x = SCREEN_WIDTH / 4 - icon_width / 2;
   origin.y = SCREEN_HEIGHT / 2 - icon_height / 2;
@@ -528,10 +579,10 @@ void drawBrewCounter(CURRENT_STATE *state)
   uView.setFontType(old_font);
 }
 
-void drawTrendArrow(unsigned char rising, unsigned int y_origin)
+void drawTrendArrow(byte rising, uint16_t y_origin)
 {
   POINT pos;
-  unsigned int height = 5;
+  uint16_t height = 5;
   int y;
   
   pos.y += y_origin + (rising ? (-1 * (height) - 3) : (uView.getFontHeight()) + 3);
@@ -583,14 +634,14 @@ void updateDisplay(CURRENT_STATE *state)
     double temperature = state->temperature_fast;
   
     /* Calculate the percentage of the current temperature within the range  */
-    float percentage = (temperature - state->range.min)/(state->range.max - state->range.min);
+    double percentage = (temperature - state->range.min)/(state->range.max - state->range.min);
   
     /* Display the current temperature range */
-    drawBottomBar((unsigned int)state->range.min, (unsigned int)state->range.max, percentage);
+    drawBottomBar((uint16_t)state->range.min, (uint16_t)state->range.max, percentage);
   
     /* Display the current temperature */
-    int temp_width = (getInt16PrintLen((int)(temperature)) + 2)*(uView.getFontWidth() + 1) + 1;
-    int temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
+    uint16_t temp_width = (getInt16PrintLen((int)(temperature)) + 2)*(uView.getFontWidth() + 1) + 1;
+    uint16_t temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
   
     /* Move the cursor for drawing the temperature to the 3/4 of the screen */
     uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
@@ -841,7 +892,7 @@ void processAtCommands()
           else
           {
             // Parsing the command
-            res = at_parse_line((string_t)readString.c_str(), (unsigned char*)ret);
+            res = at_parse_line((string_t)readString.c_str(), (byte*)ret);
 
             readString = "";
 

@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+
 void initTime(TIME *t);
 void formatTime(TIME *t, char *buffer);
 void incrementSeconds(TIME *t);

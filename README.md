@@ -7,3 +7,4 @@ EspressoGuid is a MicroView based hardware for monitoring an espresso maker
 Following libraries are needed:
 * https://github.com/adafruit/Adafruit-MAX31855-library
 * https://github.com/geekammo/MicroView-Arduino-Library
+* https://github.com/Schm1tz1/arduino-tsic

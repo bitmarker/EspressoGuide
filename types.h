@@ -12,4 +12,6 @@
 
 typedef const unsigned char * string_t;
 
+typedef unsigned char byte;
+
 #endif
