@@ -1,24 +1,56 @@
 #include "utils.h"
-#include "at_parser.h"
 #include "espresso_guide.h"
 #include <MicroView.h>
-/*#include <SPI.h>*/
-/*#include <Adafruit_MAX31855.h>*/
-#include "images.h"
-#include <EEPROM.h>
 #include <TSIC.h>
+
+const unsigned int icon_data_welcome[] PROGMEM = {0x0b20, 0x0b21, 0x0b22, 0x0b23, 0x0b24, 0x0c20, 0x0c22, 0x0c24, 0x0d20, 0x0d24, 0x1021, 0x1024, 0x1120, 0x1122, 0x1124, 0x1220, 0x1222, 0x1224, 0x1320, 0x1323, 0x1428, 0x1429, 0x142a, 0x1527, 0x152b, 0x160d, 0x160e, 0x160f, 0x1610, 0x1611, 0x1612, 0x1613, 0x1620, 0x1621, 0x1622, 0x1623, 0x1624, 0x1627, 0x162b, 0x170b, 0x170c, 0x170d, 0x170e, 0x170f, 0x1710, 0x1711, 0x1712, 0x1713, 0x1714, 0x1715, 0x1720, 0x1722, 0x172a, 0x172b, 0x1809, 0x180a, 0x180b, 0x180c, 0x1814, 0x1815, 0x1816, 0x1817, 0x1820, 0x1822, 0x1908, 0x1909, 0x190a, 0x1916, 0x1917, 0x1918, 0x1921, 0x1a07, 0x1a08, 0x1a18, 0x1a19, 0x1a27, 0x1a28, 0x1a29, 0x1a2a, 0x1b06, 0x1b07, 0x1b08, 0x1b18, 0x1b19, 0x1b1a, 0x1b2b, 0x1c06, 0x1c07, 0x1c19, 0x1c1a, 0x1c20, 0x1c21, 0x1c22, 0x1c23, 0x1c24, 0x1c2b, 0x1d05, 0x1d06, 0x1d1a, 0x1d1b, 0x1d20, 0x1d22, 0x1d27, 0x1d28, 0x1d29, 0x1d2a, 0x1e05, 0x1e06, 0x1e12, 0x1e13, 0x1e14, 0x1e15, 0x1e16, 0x1e17, 0x1e18, 0x1e19, 0x1e1a, 0x1e1b, 0x1e20, 0x1e22, 0x1e23, 0x1f05, 0x1f06, 0x1f0e, 0x1f0f, 0x1f10, 0x1f11, 0x1f12, 0x1f13, 0x1f14, 0x1f15, 0x1f16, 0x1f17, 0x1f18, 0x1f19, 0x1f1a, 0x1f1b, 0x1f21, 0x1f24, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0x2010, 0x2011, 0x2012, 0x201a, 0x201b, 0x2027, 0x2028, 0x2029, 0x202a, 0x202b, 0x2105, 0x2106, 0x2107, 0x2108, 0x2109, 0x210a, 0x210b, 0x210c, 0x210d, 0x210e, 0x211a, 0x211b, 0x2205, 0x2206, 0x221a, 0x221b, 0x2220, 0x2221, 0x2222, 0x2223, 0x2224, 0x2306, 0x2307, 0x2319, 0x231a, 0x2320, 0x2322, 0x2324, 0x2327, 0x2328, 0x2329, 0x232a, 0x232b, 0x2406, 0x2407, 0x2408, 0x2418, 0x2419, 0x241a, 0x2420, 0x2424, 0x2427, 0x242b, 0x2507, 0x2508, 0x2518, 0x2519, 0x2527, 0x252b, 0x2608, 0x2609, 0x260a, 0x2616, 0x2617, 0x2618, 0x2628, 0x2629, 0x262a, 0x2709, 0x270a, 0x270b, 0x270c, 0x2714, 0x2715, 0x2716, 0x2717, 0x2721, 0x2724, 0x280b, 0x280c, 0x280d, 0x280e, 0x280f, 0x2810, 0x2811, 0x2812, 0x2813, 0x2814, 0x2815, 0x2820, 0x2822, 0x2824, 0x290d, 0x290e, 0x290f, 0x2910, 0x2911, 0x2912, 0x2913, 0x2920, 0x2922, 0x2924, 0x2927, 0x2928, 0x2929, 0x292a, 0x292b, 0x2a20, 0x2a23, 0x2a27, 0x2a29, 0x2a2b, 0x2b27, 0x2b2b, 0x2d21, 0x2d24, 0x2e20, 0x2e22, 0x2e24, 0x2f20, 0x2f22, 0x2f24, 0x3020, 0x3023, 0x3321, 0x3322, 0x3323, 0x3420, 0x3424, 0x3520, 0x3524, 0x3621, 0x3622, 0x3623};
+
+const unsigned int icon_data_zero[] PROGMEM = {0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107, 0x0108, 0x0109, 0x010a, 0x010b, 0x010c, 0x010d, 0x010e, 0x010f, 0x0110, 0x0111, 0x0202, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0209, 0x020a, 0x020b, 0x020c, 0x020d, 0x020e, 0x020f, 0x0210, 0x0211, 0x0212, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x0309, 0x030a, 0x030b, 0x030c, 0x030d, 0x030e, 0x030f, 0x0310, 0x0311, 0x0312, 0x0313, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407, 0x0408, 0x0409, 0x040a, 0x040b, 0x040c, 0x040d, 0x040e, 0x040f, 0x0410, 0x0411, 0x0412, 0x0413, 0x0500, 0x0501, 0x0502, 0x0503, 0x0504, 0x0510, 0x0511, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0d, 0x0a0e, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c09, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0d03, 0x0d04, 0x0d05, 0x0d06, 0x0d07, 0x0d08, 0x0d09, 0x0d0a, 0x0d0b, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d10, 0x0d11, 0x0e06, 0x0e07, 0x0e08, 0x0e09, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0d, 0x0e0e};
+const int icon_count_zero = 202;
+const int icon_width_zero = 15;
+
+const unsigned int icon_data_one[] PROGMEM = {0x0005, 0x0104, 0x0105, 0x0106, 0x0107, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0402, 0x0403, 0x0404, 0x0405, 0x0501, 0x0502, 0x0503, 0x0504, 0x0600, 0x0601, 0x0602, 0x0603, 0x0604, 0x0605, 0x0606, 0x0607, 0x0608, 0x0609, 0x060a, 0x060b, 0x060c, 0x060d, 0x060e, 0x060f, 0x0610, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x0704, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070a, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0710, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x0804, 0x0805, 0x0806, 0x0807, 0x0808, 0x0809, 0x080a, 0x080b, 0x080c, 0x080d, 0x080e, 0x080f, 0x0810, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x0905, 0x0906, 0x0907, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x090d, 0x090e, 0x090f, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914};
+const int icon_count_one = 107;
+const int icon_width_one = 12;
+
+const unsigned int icon_data_two[] PROGMEM = {0x0003, 0x0011, 0x0012, 0x0013, 0x0014, 0x0102, 0x0103, 0x0104, 0x0110, 0x0111, 0x0112, 0x0113, 0x0114, 0x0201, 0x0202, 0x0203, 0x0204, 0x0205, 0x020f, 0x0210, 0x0211, 0x0212, 0x0213, 0x0214, 0x0301, 0x0302, 0x0303, 0x0304, 0x030f, 0x0310, 0x0311, 0x0312, 0x0313, 0x0314, 0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x040e, 0x040f, 0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x050d, 0x050e, 0x050f, 0x0510, 0x0511, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x060c, 0x060d, 0x060e, 0x060f, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x070b, 0x070c, 0x070d, 0x070e, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x080a, 0x080b, 0x080c, 0x080d, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x090d, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a11, 0x0a12, 0x0a13, 0x0a14, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b11, 0x0b12, 0x0b13, 0x0b14, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c09, 0x0c0a, 0x0c11, 0x0c12, 0x0c13, 0x0c14, 0x0d03, 0x0d04, 0x0d05, 0x0d06, 0x0d07, 0x0d08, 0x0d11, 0x0d12, 0x0d13, 0x0d14, 0x0e11, 0x0e12, 0x0e13, 0x0e14};
+const int icon_count_two = 168;
+const int icon_width_two = 15;
+
+const unsigned int icon_data_three[] PROGMEM = {0x0002, 0x0010, 0x0011, 0x0012, 0x0013, 0x0101, 0x0102, 0x0103, 0x0110, 0x0111, 0x0112, 0x0113, 0x0201, 0x0202, 0x0203, 0x0204, 0x0210, 0x0211, 0x0212, 0x0213, 0x0214, 0x0301, 0x0302, 0x0303, 0x0304, 0x0309, 0x030a, 0x030b, 0x0311, 0x0312, 0x0313, 0x0314, 0x0400, 0x0401, 0x0402, 0x0403, 0x0409, 0x040a, 0x040b, 0x0411, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x0509, 0x050a, 0x050b, 0x0511, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x0609, 0x060a, 0x060b, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x0709, 0x070a, 0x070b, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x0808, 0x0809, 0x080a, 0x080b, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0d, 0x0a0e, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0c01, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0d03, 0x0d04, 0x0d05, 0x0d06, 0x0d07, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d10, 0x0d11, 0x0d12, 0x0e0d, 0x0e0e, 0x0e0f, 0x0e10};
+const int icon_count_three = 173;
+const int icon_width_three = 15;
+
+const unsigned int icon_data_four[] PROGMEM = {0x000c, 0x000d, 0x000e, 0x000f, 0x010a, 0x010b, 0x010c, 0x010d, 0x010e, 0x010f, 0x0209, 0x020a, 0x020b, 0x020c, 0x020d, 0x020e, 0x020f, 0x0308, 0x0309, 0x030a, 0x030b, 0x030c, 0x030d, 0x030e, 0x030f, 0x0406, 0x0407, 0x0408, 0x0409, 0x040a, 0x040b, 0x040d, 0x040e, 0x040f, 0x0505, 0x0506, 0x0507, 0x0508, 0x0509, 0x050d, 0x050e, 0x050f, 0x0603, 0x0604, 0x0605, 0x0606, 0x0607, 0x0608, 0x060d, 0x060e, 0x060f, 0x0702, 0x0703, 0x0704, 0x0705, 0x0706, 0x070d, 0x070e, 0x070f, 0x0800, 0x0801, 0x0802, 0x0803, 0x0804, 0x0805, 0x080d, 0x080e, 0x080f, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x0905, 0x0906, 0x0907, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x090d, 0x090e, 0x090f, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0d, 0x0a0e, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0a14, 0x0b00, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0b14, 0x0c00, 0x0c01, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c09, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0c13, 0x0c14, 0x0d0d, 0x0d0e, 0x0d0f, 0x0e0d, 0x0e0e, 0x0e0f, 0x0f0d, 0x0f0e, 0x0f0f};
+const int icon_count_four = 161;
+const int icon_width_four = 16;
+
+const unsigned int icon_data_five[] PROGMEM = {0x0010, 0x0011, 0x0012, 0x0013, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107, 0x0108, 0x0109, 0x010a, 0x0110, 0x0111, 0x0112, 0x0113, 0x0200, 0x0201, 0x0202, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0209, 0x020a, 0x0210, 0x0211, 0x0212, 0x0213, 0x0214, 0x0300, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x0309, 0x030a, 0x0311, 0x0312, 0x0313, 0x0314, 0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407, 0x0408, 0x0409, 0x040a, 0x0411, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x0504, 0x0507, 0x0508, 0x0509, 0x050a, 0x0511, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x0607, 0x0608, 0x0609, 0x060a, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x0707, 0x0708, 0x0709, 0x070a, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x0807, 0x0808, 0x0809, 0x080a, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0907, 0x0908, 0x0909, 0x090a, 0x090b, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0d, 0x0a0e, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0b00, 0x0b01, 0x0b02, 0x0b03, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0c00, 0x0c01, 0x0c02, 0x0c03, 0x0c08, 0x0c09, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0d0a, 0x0d0b, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d10, 0x0d11, 0x0e0c, 0x0e0d, 0x0e0e};
+const int icon_count_five = 185;
+const int icon_width_five = 15;
+
+const unsigned int icon_data_six[] PROGMEM = {0x0008, 0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f, 0x0105, 0x0106, 0x0107, 0x0108, 0x0109, 0x010a, 0x010b, 0x010c, 0x010d, 0x010e, 0x010f, 0x0110, 0x0111, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0209, 0x020a, 0x020b, 0x020c, 0x020d, 0x020e, 0x020f, 0x0210, 0x0211, 0x0212, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x0309, 0x030a, 0x030b, 0x030c, 0x030d, 0x030e, 0x030f, 0x0310, 0x0311, 0x0312, 0x0313, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0409, 0x040a, 0x040b, 0x040c, 0x040d, 0x040e, 0x040f, 0x0410, 0x0411, 0x0412, 0x0413, 0x0501, 0x0502, 0x0503, 0x0504, 0x0508, 0x0509, 0x050a, 0x0510, 0x0511, 0x0512, 0x0513, 0x0514, 0x0601, 0x0602, 0x0603, 0x0604, 0x0607, 0x0608, 0x0609, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x0707, 0x0708, 0x0709, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x0807, 0x0808, 0x0809, 0x0811, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0907, 0x0908, 0x0909, 0x0910, 0x0911, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0a14, 0x0b00, 0x0b01, 0x0b02, 0x0b03, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0c00, 0x0c01, 0x0c02, 0x0c03, 0x0c08, 0x0c09, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0c13, 0x0d00, 0x0d01, 0x0d02, 0x0d03, 0x0d09, 0x0d0a, 0x0d0b, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d10, 0x0d11, 0x0d12, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0d, 0x0e0e, 0x0e0f, 0x0e10};
+const int icon_count_six = 198;
+const int icon_width_six = 15;
+
+const unsigned int icon_data_seven[] PROGMEM = {0x0000, 0x0001, 0x0002, 0x0003, 0x0100, 0x0101, 0x0102, 0x0103, 0x0200, 0x0201, 0x0202, 0x0203, 0x0300, 0x0301, 0x0302, 0x0303, 0x0312, 0x0313, 0x0314, 0x0400, 0x0401, 0x0402, 0x0403, 0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x050e, 0x050f, 0x0510, 0x0511, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x060c, 0x060d, 0x060e, 0x060f, 0x0610, 0x0611, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x070a, 0x070b, 0x070c, 0x070d, 0x070e, 0x070f, 0x0710, 0x0711, 0x0712, 0x0713, 0x0800, 0x0801, 0x0802, 0x0803, 0x0808, 0x0809, 0x080a, 0x080b, 0x080c, 0x080d, 0x080e, 0x080f, 0x0810, 0x0811, 0x0900, 0x0901, 0x0902, 0x0903, 0x0906, 0x0907, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x090d, 0x090e, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0b00, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0c00, 0x0c01, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0d00, 0x0d01, 0x0d02, 0x0d03, 0x0d04, 0x0d05, 0x0e00, 0x0e01, 0x0e02, 0x0e03};
+const int icon_count_seven = 136;
+const int icon_width_seven = 15;
+
+const unsigned int icon_data_eight[] PROGMEM = {0x000d, 0x000e, 0x000f, 0x0010, 0x0011, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107, 0x010c, 0x010d, 0x010e, 0x010f, 0x0110, 0x0111, 0x0112, 0x0201, 0x0202, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x020b, 0x020c, 0x020d, 0x020e, 0x020f, 0x0210, 0x0211, 0x0212, 0x0213, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x0309, 0x030a, 0x030b, 0x030c, 0x030d, 0x030e, 0x030f, 0x0310, 0x0311, 0x0312, 0x0313, 0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406, 0x0407, 0x0408, 0x0409, 0x040a, 0x040b, 0x040c, 0x040d, 0x0411, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x0507, 0x0508, 0x0509, 0x050a, 0x050b, 0x050c, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0608, 0x0609, 0x060a, 0x060b, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0708, 0x0709, 0x070a, 0x070b, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0808, 0x0809, 0x080a, 0x080b, 0x080c, 0x0812, 0x0813, 0x0814, 0x0900, 0x0901, 0x0902, 0x0903, 0x0907, 0x0908, 0x0909, 0x090a, 0x090b, 0x090c, 0x0912, 0x0913, 0x0914, 0x0a00, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0c, 0x0a0d, 0x0a11, 0x0a12, 0x0a13, 0x0a14, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0b13, 0x0c01, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0c12, 0x0c13, 0x0d02, 0x0d03, 0x0d04, 0x0d05, 0x0d06, 0x0d07, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0d10, 0x0d11, 0x0d12, 0x0e0d, 0x0e0e, 0x0e0f, 0x0e10, 0x0e11};
+const int icon_count_eight = 199;
+const int icon_width_eight = 15;
+
+const unsigned int icon_data_nine[] PROGMEM = {0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000a, 0x0102, 0x0103, 0x0104, 0x0105, 0x0106, 0x0107, 0x0108, 0x0109, 0x010a, 0x010b, 0x0112, 0x0113, 0x0114, 0x0201, 0x0202, 0x0203, 0x0204, 0x0205, 0x0206, 0x0207, 0x0208, 0x0209, 0x020a, 0x020b, 0x020c, 0x0212, 0x0213, 0x0214, 0x0301, 0x0302, 0x0303, 0x0304, 0x0305, 0x0306, 0x0307, 0x0308, 0x0309, 0x030a, 0x030b, 0x030c, 0x030d, 0x0312, 0x0313, 0x0314, 0x0400, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0409, 0x040a, 0x040b, 0x040c, 0x040d, 0x0412, 0x0413, 0x0414, 0x0500, 0x0501, 0x0502, 0x0503, 0x0504, 0x050b, 0x050c, 0x050d, 0x0512, 0x0513, 0x0514, 0x0600, 0x0601, 0x0602, 0x0603, 0x060b, 0x060c, 0x060d, 0x0612, 0x0613, 0x0614, 0x0700, 0x0701, 0x0702, 0x0703, 0x070b, 0x070c, 0x070d, 0x0711, 0x0712, 0x0713, 0x0714, 0x0800, 0x0801, 0x0802, 0x0803, 0x080b, 0x080c, 0x080d, 0x0811, 0x0812, 0x0813, 0x0900, 0x0901, 0x0902, 0x0903, 0x0904, 0x090a, 0x090b, 0x090c, 0x0910, 0x0911, 0x0912, 0x0913, 0x0a01, 0x0a02, 0x0a03, 0x0a04, 0x0a05, 0x0a06, 0x0a07, 0x0a08, 0x0a09, 0x0a0a, 0x0a0b, 0x0a0e, 0x0a0f, 0x0a10, 0x0a11, 0x0a12, 0x0a13, 0x0b01, 0x0b02, 0x0b03, 0x0b04, 0x0b05, 0x0b06, 0x0b07, 0x0b08, 0x0b09, 0x0b0a, 0x0b0b, 0x0b0c, 0x0b0d, 0x0b0e, 0x0b0f, 0x0b10, 0x0b11, 0x0b12, 0x0c02, 0x0c03, 0x0c04, 0x0c05, 0x0c06, 0x0c07, 0x0c08, 0x0c09, 0x0c0a, 0x0c0b, 0x0c0c, 0x0c0d, 0x0c0e, 0x0c0f, 0x0c10, 0x0c11, 0x0d03, 0x0d04, 0x0d05, 0x0d06, 0x0d07, 0x0d08, 0x0d09, 0x0d0a, 0x0d0b, 0x0d0c, 0x0d0d, 0x0d0e, 0x0d0f, 0x0e05, 0x0e06, 0x0e07, 0x0e08, 0x0e09, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0d};
+const int icon_count_nine = 192;
+const int icon_width_nine = 15;
+
+
+#define DRAW_DIGIT(name, x, y) drawIcon(icon_data_##name, icon_count_##name, x, y);
+#define DIGIT_WIDTH(name) icon_width_##name
 
 #define printv(name) Serial.print(#name); Serial.print(": "); Serial.println(name);
 
-/**
- * LOP
- * 
- * + Use different type of sensor for temperature
- * + Error Counter. Show error only when count reached some level
- * + Saving config data to eeprom
- */
-
-CONFIG config;
 CURRENT_STATE current_state;
 
 #define MAX_ICONS             10
@@ -27,19 +59,16 @@ CURRENT_STATE current_state;
 #define PIN_DO                3
 #define PIN_CS                6
 #define PIN_CLK               5
-#define WELCOME_SCREEN_DELAY  3
+#define WELCOME_SCREEN_DELAY  1 /* sec */
+#define BREW_COUNTER_DELAY    2 /* sec */
+#define SLOPE_DELTA           0.02
 
 #define DEVICE_DESCRIPTION "EspressoGuide v0.0.1"
 
 ACTION_COUNTER counters[MAX_COUNTERS];
-ICON icons[MAX_ICONS];
 
 uint16_t SCREEN_WIDTH = uView.getLCDWidth();
 uint16_t SCREEN_HEIGHT = uView.getLCDHeight();
-
-/* DEPRECATED */
-/* Adafruit_MAX31855 thermocouple(PIN_CLK, PIN_CS, PIN_DO); */
-/* DEPRECATED */
 
 TSIC mainTempSensor(4, 2);
 
@@ -58,7 +87,7 @@ double measureMainTemperature()
   /*
   uint16_t temp_raw;
   double temp;
-  
+
   if(mainTempSensor.getTemperature(&temp_raw))
   {
     Serial.print("uint_16: ");
@@ -69,69 +98,8 @@ double measureMainTemperature()
     Serial.println(" °C");
   }
   */
-  
+
   return analogRead(A1) / 1024.0 * 300.0;
-}
-
-void setupConfig()
-{
-  loadConfigFromEeprom();
-
-  /* Check if eeprom contains valid data if return if it so */
-  if(config.min > 0 && config.max > 0 && config.slope_delta > 0)
-  {
-    return;
-  }
-  
-  /* Min temperature */
-  config.min = 1;
-  
-  /* If the temperature is below cold start, the boiler is cold */
-  config.warmup.min = 30.0;
-  /* Lowest temperature edge, show the heat up screen */
-  config.warmup.max = 80.0;
-  
-  /* Lowest point of the espresso thermostat */
-  config.espresso.min = config.warmup.max;
-  /* Highest point of the espresso thermostat */
-  config.espresso.max = 115.0;
-
-  /* Lowest point of the steam thermostat */
-  config.steam.min = 150.0;
-  /* Highest point of the steam thermostat */
-  config.steam.max = 250.0;
-  
-  /* Max temperature of the boiler */
-  config.max = 270;
-
-  /* Minimal shot time */
-  config.shot_min_time = 15;
-
-  /* Delay in seconds before the brew counter starts counting */
-  config.brew_counter_delay = 2;
-
-  /* Temperature delta threshold */
-  config.slope_delta = 0.03;
-}
-
-void loadConfigFromEeprom()
-{
-  EEPROM.get(0, config);
-
-  Serial.println(DEVICE_DESCRIPTION);
-  
-  printv(config.min);
-  printv(config.max);
-  printv(config.espresso.min);
-  printv(config.espresso.max);
-  printv(config.steam.min);
-  printv(config.steam.max);
-  printv(config.brew_counter_delay);
-}
-
-void saveConfigToEeprom()
-{
-  EEPROM.put(0, config);
 }
 
 /**
@@ -144,7 +112,7 @@ void setupTimer()
   TCCR1A = 0;
   TCCR1B = 0;
   TCNT1  = 0;
-  OCR1A = 16000/64;                       /* compare match register 16MHz/64/1000Hz */
+  OCR1A = 16000 / 64;                     /* compare match register 16MHz/64/1000Hz */
   TCCR1B |= (1 << WGM12);                 /* CTC mode */
   TCCR1B |= (1 << CS11) | (1 << CS10);    /* 64 prescaler */
   TIMSK1 |= (1 << OCIE1A);                /* enable timer compare interrupt */
@@ -158,17 +126,17 @@ void setupTimer()
 ISR(TIMER1_COMPA_vect)
 {
   uint16_t i;
-  for(i = 0; i < MAX_COUNTERS; i++)
+  for (i = 0; i < MAX_COUNTERS; i++)
   {
     /* Check if the callback function is set */
-    if(counters[i].callback != 0 && counters[i].elapsed != 1)
+    if (counters[i].callback != 0 && counters[i].elapsed != 1)
     {
       /* Increment the counter */
       counters[i].count++;
 
       /* Counter has reached the interval, set elapsed flag to 1,
          so the callback can be executed */
-      if(counters[i].count > counters[i].interval)
+      if (counters[i].count > counters[i].interval)
       {
         counters[i].count = 0;
         counters[i].elapsed = 1;
@@ -177,22 +145,6 @@ ISR(TIMER1_COMPA_vect)
   }
 }
 
-
-
-/**
- * Increments the shot counter. If the count is greater than 99 reset the counter
- */
-void incrementShots(uint16_t *shot_count)
-{
-  (*shot_count)++;
-  
-  if(*shot_count > 99)
-  {
-    *shot_count = 0;
-  }
-}
-
-
 /*
  * This function is called in the main loop. All timer callbacks with elapsed
  * flag set to 1 will be executed
@@ -200,145 +152,14 @@ void incrementShots(uint16_t *shot_count)
 void executeCounters(CURRENT_STATE *state)
 {
   uint16_t i;
-  for(i = 0; i < MAX_COUNTERS; i++)
+  for (i = 0; i < MAX_COUNTERS; i++)
   {
-    if(counters[i].elapsed && counters[i].callback != 0)
+    if (counters[i].elapsed && counters[i].callback != 0)
     {
       counters[i].elapsed = 0;
       counters[i].callback(state);
     }
   }
-}
-
-void drawIcon(ICON *icon, uint16_t x, uint16_t y)
-{
-  uint16_t i;
-  
-  for(i = 0; i < icon->count; i++)
-  {
-    uint16_t icon_data = pgm_read_word_near(icon->pixels + i);
-    int ix = (icon_data >> 8) & 0x00FF;
-    int iy = icon_data & 0x00FF;
-    uView.pixel(x + ix, y + iy);
-  }
-}
-
-void drawTopBar(CURRENT_STATE *state)
-{
-  POINT top_left, bottom_left, bottom_right;
-  
-  char buffer[] = "1:23:45";
-  
-  top_left.x = 0;
-  top_left.y = 0;
-
-  bottom_left.x = top_left.x;
-  bottom_left.y = top_left.y + uView.getFontHeight();
-
-  bottom_right.x = bottom_left.x + SCREEN_WIDTH;
-  bottom_right.y = bottom_left.y;
-
-  uView.line(bottom_left.x, bottom_left.y + 1, bottom_right.x, bottom_left.y + 1);
-
-  uView.setCursor(bottom_left.x, bottom_left.y - uView.getFontHeight());
-
-  formatTime(&state->run_time, buffer);
-
-  /* Draw the time */
-  uView.print(buffer);
-
-  /* If the pump is on, show the symbol. Otherwise show the shot counter */
-  if(state->pump)
-  {
-    /* Let the icon blink when waiting for the brew counter delay  */
-    if((state->brew_counter_delay > 0 && state->blink_counter < 2)
-        || state->brew_counter_delay == 0)
-    {
-      drawIcon(&icons[SCREEN_BREW], SCREEN_WIDTH - 8, 0);
-    }
-  }
-  else
-  {
-    /* Draw the shot counter */
-    if(state->shot_count > 0)
-    {
-      sprintf(buffer, "%02d", state->shot_count);
-      uView.setCursor(SCREEN_WIDTH - uView.getFontWidth() * 2 - 1, bottom_left.y - uView.getFontHeight());
-      uView.print(buffer);
-    }
-  }
-}
-
-
-void drawBottomBar(uint16_t from, uint16_t to, double percentage)
-{
-  POINT top_left, top_right, from_left, from_right, to_left, to_right;
-  char buffer[5];
-
-  top_left.x = 0;
-  top_left.y = SCREEN_HEIGHT - uView.getFontHeight() - 1;
-
-  top_right.x = top_left.x + SCREEN_WIDTH;
-  top_right.y = top_left.y;
-
-  uView.line(top_left.x, top_left.y - 1, top_right.x, top_left.y - 1);
-
-  sprintf(buffer, "%d", from);
-
-  from_left.x = 0;
-  from_left.y = top_left.y + 2;
-  from_right.x = (uView.getFontWidth() + 1) * getInt16PrintLen(from);
-  from_right.y = from_left.y;
-
-  /* Draw the "from" value */
-  uView.setCursor(from_left.x, from_left.y);
-  uView.print(buffer);
-
-  sprintf(buffer, "%d", to);
-
-  to_left.x = SCREEN_WIDTH - (uView.getFontWidth() + 1) * getInt16PrintLen(to) + 1;
-  to_left.y = from_left.y;
-  to_right.x = SCREEN_WIDTH;
-  to_right.y = from_left.y;
-
-  uView.setCursor(to_left.x, to_left.y);
-  uView.print(buffer);
-
-  int left = from_right.x + 1;
-  int width = to_left.x - from_right.x - 4;
-  int height = uView.getFontHeight() - 1;
-
-  if(percentage > 1)
-  {
-    percentage = 1;
-  }
-
-  if(percentage < 0)
-  {
-    percentage = 0;
-  }
-
-  /* Draw the range progress bar */
-  uView.rect(left, from_right.y, width + 1, height);
-  
-  uView.line(left + (int)(width * percentage), from_right.y, left + (int)(width * percentage), from_right.y + height);
-
-  /* Fill the rect's each second pixel */
-  for(uint16_t x = 0; x < (int)(width * percentage); x += 2)
-  {
-    for(int y = 0; y < height; y += 2)
-    {
-      uView.pixel(left + x, from_right.y + y);
-    }
-  }
-
-  /* Draw black pixels to make the rect's corners look round */
-  uView.setColor(BLACK);
-  uView.pixel(left, from_right.y);
-  uView.pixel(left + width, from_right.y);
-  uView.pixel(left, from_right.y + height - 1);
-  uView.pixel(left + width, from_right.y + height - 1);
-  uView.setColor(WHITE);
 }
 
 /* Initializing the display */
@@ -353,7 +174,6 @@ void setupState()
 {
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
-  current_state.shot_count = 0;
   initTime(&current_state.run_time);
   initTime(&current_state.brew_time);
   current_state.welcome_counter = WELCOME_SCREEN_DELAY;
@@ -369,10 +189,10 @@ void updateClock(CURRENT_STATE *state)
 {
   incrementSeconds(&state->run_time);
 
-  if(state->shot_state == SHOT_BREWING)
+  if (state->shot_state == SHOT_BREWING)
   {
     /* Starts counting the brew time only when the delay is over */
-    if(state->brew_counter_delay > 0)
+    if (state->brew_counter_delay > 0)
     {
       state->brew_counter_delay--;
     }
@@ -383,7 +203,7 @@ void updateClock(CURRENT_STATE *state)
   }
 
   /* Count down the welcome counter */
-  if(state->welcome_counter > 0)
+  if (state->welcome_counter > 0)
   {
     state->welcome_counter--;
   }
@@ -392,8 +212,8 @@ void updateClock(CURRENT_STATE *state)
 void updateAuxCounters(CURRENT_STATE *state)
 {
   state->blink_counter++;
-  
-  if(state->blink_counter >= 4)
+
+  if (state->blink_counter >= 4)
   {
     state->blink_counter = 0;
   }
@@ -402,7 +222,7 @@ void updateAuxCounters(CURRENT_STATE *state)
 void setupCounters()
 {
   int i;
-  for(i = 0; i < MAX_COUNTERS; i++)
+  for (i = 0; i < MAX_COUNTERS; i++)
   {
     counters[i].count = 0;
     counters[i].interval = 0;
@@ -411,7 +231,7 @@ void setupCounters()
   }
 
   i = 0;
-  
+
   initCounter(&counters[0], 500, updateCurrentTemperature);
   initCounter(&counters[1], 500, selectScreen);
   initCounter(&counters[2], 1000, updateClock);
@@ -421,188 +241,207 @@ void setupCounters()
 }
 
 
-
-void setupIcons()
-{
-  int i;
-  for(i = 0; i < MAX_ICONS; i++)
-  {
-    icons[i].count = 0;
-  }
-
-  SET_ICON(SCREEN_ESPRESSO, icon_data_espresso_mug);
-  SET_ICON(SCREEN_WARMUP, icon_data_warmup);
-  SET_ICON(SCREEN_HEATUP, icon_data_heatup);
-  SET_ICON(SCREEN_BREW, icon_data_pump);
-  SET_ICON(SCREEN_WELCOME, icon_data_welcome);
-  SET_ICON(SCREEN_STEAM, icon_data_steam);
-  SET_ICON(SCREEN_TOOCOLD, icon_data_toocold);
-  SET_ICON(SCREEN_TOOHOT, icon_data_toohot);
-}
-
- 
-char getEspressoMin(char *value)
-{
-  sprintf(value, "%d", (int)config.espresso.min);
-  return AT_OK;
-}
-
-char setEspressoMin(char *value)
-{
-  config.espresso.min = atoi(value);
-  saveConfigToEeprom();
-  return AT_OK;
-}
-
-char getEspressoMax(char *value)
-{
-  sprintf(value, "%d", (int)config.espresso.max);
-  return AT_OK;
-}
-
-char setEspressoMax(char *value)
-{
-  config.espresso.max = atoi(value);
-  saveConfigToEeprom();
-  return AT_OK;
-}
-
-char getSteamMin(char *value)
-{
-  sprintf(value, "%d", (int)config.steam.min);
-  return AT_OK;
-}
-
-char setSteamMin(char *value)
-{
-  config.steam.min = atoi(value);
-  saveConfigToEeprom();
-  return AT_OK;
-}
-
-char getSteamMax(char *value)
-{
-  sprintf(value, "%d", (int)config.steam.max);
-  return AT_OK;
-}
-
-char setSteamMax(char *value)
-{
-  config.steam.max = atoi(value);
-  saveConfigToEeprom();
-  return AT_OK;
-}
-
-char getCounterDelay(char *value)
-{
-  sprintf(value, "%d", (int)config.brew_counter_delay);
-  return AT_OK;
-}
-
-char setCounterDelay(char *value)
-{
-  config.brew_counter_delay = atoi(value);
-  saveConfigToEeprom();
-  return AT_OK;
-}
-
-void setupAtCommands()
-{
-   at_register_command((string_t)"EMIN", (at_callback)getEspressoMin, (at_callback)setEspressoMin, 0, 0);
-   at_register_command((string_t)"EMAX", (at_callback)getEspressoMax, (at_callback)setEspressoMax, 0, 0);
-   at_register_command((string_t)"SMIN", (at_callback)getSteamMin, (at_callback)setSteamMin, 0, 0);
-   at_register_command((string_t)"SMAX", (at_callback)getSteamMax, (at_callback)setSteamMax, 0, 0);
-   at_register_command((string_t)"CNDL", (at_callback)getCounterDelay, (at_callback)setCounterDelay, 0, 0);
-}
-
 void setup()
 {
-  setupIcons();
   setupPins();
   setupSerial();
-  setupAtCommands();
-  setupConfig();
   setupState();
   setupDisplay();
   setupCounters();
   setupTimer();
 }
 
-
-/***
- * Draws an icon in the left part of the screen
- */
-void drawMainIcon(CURRENT_STATE *state)
+void drawIcon(const uint16_t *data, uint16_t len, uint16_t x, uint16_t y)
 {
-  POINT origin;
-  
-  byte icon_height = 20;
-  byte icon_width = 26;
-  
-  origin.x = SCREEN_WIDTH / 4 - icon_width / 2;
-  origin.y = SCREEN_HEIGHT / 2 - icon_height / 2;
+  uint16_t i;
 
-  drawIcon(&icons[state->screen], origin.x, origin.y);
+  for (i = 0; i < len; i++)
+  {
+    uint16_t icon_data = pgm_read_word_near(data + i);
+    int ix = (icon_data >> 8) & 0x00FF;
+    int iy = icon_data & 0x00FF;
+    uView.pixel(x + ix, y + iy);
+  }
 }
 
 
-/***
- * Draws the brew counter where the main icon should be
- */
-void drawBrewCounter(CURRENT_STATE *state)
+void drawErrorScreen(CURRENT_STATE *state)
 {
-  POINT origin;
-  char buff[3];
-  int old_font;
-  
-  origin.x = SCREEN_WIDTH / 4;
-  origin.y = SCREEN_HEIGHT / 2 + 2;
-
-  old_font = uView.getFontType();
-  uView.setFontType(1);
-
-  uView.setCursor(origin.x - uView.getFontWidth(), origin.y - uView.getFontHeight() / 2);
-  sprintf(buff, "%02d", state->brew_time.seconds);
-
-  /* Draw the brew counter with black color on white brackground */
-  uView.setColor(WHITE);
-  uView.rectFill(origin.x - uView.getFontWidth() - 3, origin.y - uView.getFontHeight() / 2 - 2, uView.getFontWidth() * 2 + 5, uView.getFontHeight());
-  uView.setColor(BLACK);
-  uView.print(buff);
-
-  /* Font fix: erasing two lines overlapping the background */
-  uView.lineH(origin.x - uView.getFontWidth() - 3, origin.y + uView.getFontHeight() / 2 - 2, uView.getFontWidth() * 2 + 5);
-  uView.lineH(origin.x - uView.getFontWidth() - 3, origin.y + uView.getFontHeight() / 2 - 1, uView.getFontWidth() * 2 + 5);
-  
-  uView.setColor(WHITE);
-
-  uView.setFontType(old_font);
+  uView.setCursor(0, 0);
+  switch (state->error)
+  {
+    case ERROR_SENSOR:
+      uView.print("Sensor\nerror!");
+      break;
+    default:
+      uView.print("Unknown\nerror!");
+  }
 }
 
-void drawTrendArrow(byte rising, uint16_t y_origin)
+void drawWelcomeScreen(CURRENT_STATE *state)
 {
-  POINT pos;
+  drawIcon(icon_data_welcome, sizeof(icon_data_welcome) / sizeof(uint16_t), 0, 0);
+}
+
+void drawDigit(uint8_t number, uint16_t x, uint16_t y)
+{
+  switch (number)
+  {
+    case 0: DRAW_DIGIT(zero, x, y); break;
+    case 1: DRAW_DIGIT(one, x, y); break;
+    case 2: DRAW_DIGIT(two, x, y); break;
+    case 3: DRAW_DIGIT(three, x, y); break;
+    case 4: DRAW_DIGIT(four, x, y); break;
+    case 5: DRAW_DIGIT(five, x, y); break;
+    case 6: DRAW_DIGIT(six, x, y); break;
+    case 7: DRAW_DIGIT(seven, x, y); break;
+    case 8: DRAW_DIGIT(eight, x, y); break;
+    case 9: DRAW_DIGIT(nine, x, y); break;
+  }
+}
+
+uint16_t getDigitWidth(uint8_t number)
+{
+  switch (number)
+  {
+    case 0: return DIGIT_WIDTH(zero);
+    case 1: return DIGIT_WIDTH(one);
+    case 2: return DIGIT_WIDTH(two);
+    case 3: return DIGIT_WIDTH(three);
+    case 4: return DIGIT_WIDTH(four);
+    case 5: return DIGIT_WIDTH(five);
+    case 6: return DIGIT_WIDTH(six);
+    case 7: return DIGIT_WIDTH(seven);
+    case 8: return DIGIT_WIDTH(eight);
+    case 9: return DIGIT_WIDTH(nine);
+  }
+  return 0;
+}
+
+uint16_t getNumberWidth(uint16_t number)
+{
+  uint8_t digits[4];
+  uint8_t count = getNumberDigits(number, digits);
+  uint16_t width = 0;
+
+  for (int i = 0; i < count; i++)
+  {
+    width += (getDigitWidth(digits[i]) + 2);
+  }
+
+  return width;
+}
+
+void printNumber(uint16_t number, POINT *origin)
+{
+  uint16_t x = origin->x;
+  uint8_t digits[4];
+  uint8_t count = getNumberDigits(number, digits);
+
+  for (int i = 0; i < count; i++)
+  {
+    drawDigit(digits[i], x, origin->y);
+    x += (getDigitWidth(digits[i]) + 2);
+  }
+}
+
+uint16_t drawMainNumber(uint16_t y, uint16_t number)
+{
+  POINT origin;
+  int height = 21;
+  origin.y = y;
+  origin.x = SCREEN_WIDTH / 2 - getNumberWidth(number) / 2;
+  printNumber(number, &origin);
+  return origin.y + height;
+}
+
+void drawTrendArrow(byte rising)
+{
   uint16_t height = 5;
   int y;
-  
-  pos.y += y_origin + (rising ? (-1 * (height) - 3) : (uView.getFontHeight()) + 3);
-  
-  for(y = 0; y < height; y++)
+
+  for (y = 0; y < height; y++)
   {
-    if(rising)
+    if (rising)
     {
-      uView.line(SCREEN_WIDTH/4*3 - y, pos.y + y, SCREEN_WIDTH/4*3 + y, pos.y + y);
+      uView.line(SCREEN_WIDTH / 2 - y, 0 + y, SCREEN_WIDTH / 2 + y, 0 + y);
     }
     else
     {
-      uView.line(SCREEN_WIDTH/4*3 - (height - y - 1), pos.y + y, SCREEN_WIDTH/4*3 + (height - y - 1), pos.y + y);
+      uView.line(SCREEN_WIDTH / 2 - (height - y - 1), SCREEN_HEIGHT - height + y, SCREEN_WIDTH / 2 + (height - y - 1), SCREEN_HEIGHT - height + y);
     }
   }
 }
 
 
+void drawIdleScreen(CURRENT_STATE *state)
+{
+  char buff[10];
+  /*uView.setCursor(0, 0);
+  sprintf(buff, "%02d", (int)state->temperature);
+  uView.print(buff);
+
+
+  uView.setCursor(0, 15);
+  formatTime(&state->run_time, buff);
+  uView.print(buff);*/
+
+  //uView.rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  uint16_t temperature = (int)state->temperature;
+
+  uint16_t y = drawMainNumber(9, temperature);
+
+  formatTime(&state->run_time, buff);
+  uView.setCursor(SCREEN_WIDTH / 2 - strlen(buff) * (uView.getFontWidth() + 1) / 2 - 1, y + 4);
+  uView.print(buff);
+
+/*
+  uView.setCursor(0, 0);
+  sprintf(buff, "%02d", state->run_time.minutes);
+  uView.print(buff);
+  
+  sprintf(buff, "%02d", state->run_time.seconds);
+  uView.setCursor(SCREEN_WIDTH - strlen(buff) * (uView.getFontWidth() + 1), 0);
+  uView.print(buff);
+
+  sprintf(buff, "%02d", state->run_time.hours);
+  uView.setCursor(0, SCREEN_HEIGHT - uView.getFontHeight());
+  uView.print(buff);
+  */
+  
+  /* Draw the trend arrow to indicate the rising or falling temperature */
+  if (state->blink_counter < 2)
+  {
+    /* Temperature is rising */
+    if (state->temp_trend > 0)
+    {
+      drawTrendArrow(1);
+    }
+    else if (state->temp_trend < 0) /* Temperature is falling */
+    {
+      drawTrendArrow(0);
+    }
+  }
+}
+
+void drawBrewScreen(CURRENT_STATE *state)
+{
+  char buff[10];
+  uView.setCursor(0, 0);
+  sprintf(buff, "%02d", state->brew_time.seconds);
+  uView.print(buff);
+
+  uView.setCursor(0, 15);
+  sprintf(buff, "%02d", (int)state->temperature);
+  uView.print(buff);
+}
+
+
+
+
 /***
- * Function for outputting the data to the display 
+ * Function for outputting the data to the display
  */
 void updateDisplay(CURRENT_STATE *state)
 {
@@ -610,71 +449,22 @@ void updateDisplay(CURRENT_STATE *state)
 
   uView.clear(PAGE);
 
-  if(state->screen == SCREEN_ERROR)
+  switch (state->screen)
   {
-    uView.setCursor(0, 0);
-    switch(state->error)
-    {
-      case ERROR_SENSOR:
-        uView.print("Sensor\nerror!");
-        break;
-      default:
-        uView.print("Unknown\nerror!");
-    }
+    case SCREEN_ERROR:
+      drawErrorScreen(state);
+      break;
+    case SCREEN_WELCOME:
+      drawWelcomeScreen(state);
+      break;
+    case SCREEN_IDLE:
+      drawIdleScreen(state);
+      break;
+    case SCREEN_BREW:
+      drawBrewScreen(state);
+      break;
   }
-  else if(state->screen == SCREEN_WELCOME)
-  {
-    drawIcon(&icons[state->screen], 0, 0);
-  }
-  else
-  {
-    /* Display the run time and shot counter */
-    drawTopBar(state);
 
-    double temperature = state->temperature_fast;
-  
-    /* Calculate the percentage of the current temperature within the range  */
-    double percentage = (temperature - state->range.min)/(state->range.max - state->range.min);
-  
-    /* Display the current temperature range */
-    drawBottomBar((uint16_t)state->range.min, (uint16_t)state->range.max, percentage);
-  
-    /* Display the current temperature */
-    uint16_t temp_width = (getInt16PrintLen((int)(temperature)) + 2)*(uView.getFontWidth() + 1) + 1;
-    uint16_t temp_y = SCREEN_HEIGHT / 2 - uView.getFontHeight() / 2;
-  
-    /* Move the cursor for drawing the temperature to the 3/4 of the screen */
-    uView.setCursor(SCREEN_WIDTH/2 + (SCREEN_WIDTH/4 - temp_width/2), temp_y);
-  
-    /* Print out the temperature with one decimal place */
-    dtostrf(temperature, 3, 1, temp);
-    uView.print(temp);
-  
-    /* Draw the trend arrow to indicate the rising or falling temperature */
-    if(state->blink_counter < 1)
-    {
-      /* Temperature is rising */
-      if(state->temp_trend > 0)
-      {
-        drawTrendArrow(1, temp_y);
-      } 
-      else if(state->temp_trend < 0) /* Temperature is falling */
-      {
-        drawTrendArrow(0, temp_y);
-      }
-    }
-    
-    /* The screen for brewing should show a counter instead of an icon */
-    if(state->screen == SCREEN_BREW)
-    {
-      drawBrewCounter(state);
-    }
-    else
-    {
-      drawMainIcon(state);
-    }
-  }
-  
   uView.display();
 }
 
@@ -686,37 +476,28 @@ void updateDisplay(CURRENT_STATE *state)
 void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
 {
   /* Every screen different from "brew" means the "shot is in idle" */
-  if(new_screen != SCREEN_BREW)
+  if (new_screen != SCREEN_BREW)
   {
-    /* Check the time and increment the shot counter when going 
-       from "brew" to some different state (like "espresso") */
-    if(state->screen == SCREEN_BREW)
+    if (state->screen == SCREEN_BREW)
     {
-      /* If the brew time exeeds a specific period, a shot was (probably) done */
-      if(timeInSeconds(&state->brew_time) >= config.shot_min_time)
-      {
-        /* Reset the time */
-        initTime(&state->brew_time);
-        
-        /* Increment number of shots */
-        incrementShots(&state->shot_count);
-      }
+      /* Reset the time */
+      initTime(&state->brew_time);
     }
-    
+
     state->shot_state = SHOT_IDLE;
   }
   else
   {
-    /* Going from "espresso" state to the "brew" state, so the shot started */
-    if(state->screen == SCREEN_ESPRESSO && new_screen == SCREEN_BREW)
+    /* Going from any state to the "brew" state, so the shot started */
+    if (state->screen != SCREEN_BREW && new_screen == SCREEN_BREW)
     {
       /* Reset the brew time */
       initTime(&state->brew_time);
-      state->brew_counter_delay = config.brew_counter_delay;
+      state->brew_counter_delay = BREW_COUNTER_DELAY;
       state->shot_state = SHOT_BREWING;
     }
   }
-  
+
   state->screen = new_screen;
 }
 
@@ -728,79 +509,27 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
 void selectScreen(CURRENT_STATE *state)
 {
   /* Showing an error :( */
-  if(state->error != ERROR_NONE)
+  if (state->error != ERROR_NONE)
   {
     changeScreen(state, SCREEN_ERROR);
     return;
   }
 
-  if(state->welcome_counter > 0)
+  if (state->welcome_counter > 0)
   {
     changeScreen(state, SCREEN_WELCOME);
     return;
   }
-
-  /* Not warming up, too cold, may be sensor fault? */
-  if(state->temperature < config.warmup.min)
+  else
   {
-    state->range.min = config.min;
-    state->range.max = config.warmup.min;
-    changeScreen(state, SCREEN_TOOCOLD);
-    return;
-  }
-
-  /* Warm up phase */
-  if(state->temperature >= config.warmup.min &&
-     state->temperature < config.warmup.max)
-  {
-    copy_range(&config.warmup, &state->range);
-    changeScreen(state, SCREEN_WARMUP);
-    return;
-  }
-
-  /* Making an espresso */
-  if(state->temperature >= config.espresso.min &&
-     state->temperature < config.espresso.max)
-  {
-    copy_range(&config.espresso, &state->range);
-
-    if(state->pump)
+    if (state->pump)
     {
       changeScreen(state, SCREEN_BREW);
     }
     else
     {
-      changeScreen(state, SCREEN_ESPRESSO);
+      changeScreen(state, SCREEN_IDLE);
     }
-
-    return;
-  }
-
-  /* Heating up for steam */
-  if(state->temperature >= config.espresso.max &&
-     state->temperature < config.steam.min)
-  {
-    state->range.min = config.espresso.max;
-    state->range.max = config.steam.min;
-    changeScreen(state, SCREEN_HEATUP);
-    return;
-  }
-
-  /* Making steam */
-  if(state->temperature >= config.steam.min &&
-     state->temperature < config.max)
-  {
-    copy_range(&config.steam, &state->range);
-    changeScreen(state, SCREEN_STEAM);
-    return;
-  }
-
-  /* Getting too hot! */
-  if(state->temperature >= config.max)
-  {
-    copy_range(&config.steam, &state->range);
-    changeScreen(state, SCREEN_TOOHOT);
-    return;
   }
 }
 
@@ -821,7 +550,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   double t = measureMainTemperature();
 
   /* If the temperature is NaN or zero, set the error flag */
-  if(isnan(t) || t < 0.1)
+  if (isnan(t) || t < 0.1)
   {
     state->error = ERROR_SENSOR;
     t = 0;
@@ -840,11 +569,11 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   state->temperature = state->temp_data.average;
 
   /* Set the trend value corresponding to the slope */
-  if(state->temp_data.slope > config.slope_delta)
+  if (state->temp_data.slope > SLOPE_DELTA)
   {
     state->temp_trend = 1;
   }
-  else if(state->temp_data.slope < -1 * config.slope_delta)
+  else if (state->temp_data.slope < -1 * SLOPE_DELTA)
   {
     state->temp_trend = -1;
   }
@@ -854,72 +583,9 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   }
 }
 
-
-void processAtCommands()
-{
-  static String readString = "";
-  char ret[50];
-  char res;
-
-  while (Serial.available())
-  {
-    if (Serial.available() > 0)
-    {
-      // Get a byte from buffer
-      char c = Serial.read();
-
-      readString += c;
-
-      // Input is too long
-      if (readString.length() > AT_MAX_TEMP_STRING)
-      {
-        Serial.println(AT_ERROR_STRING);
-        readString = "";
-      }
-      else
-      {
-        if (c == '\r' || c == ';')
-        {
-          readString.trim();
-
-          // Simple echo
-          if (readString == "AT")
-          {
-            Serial.println(DEVICE_DESCRIPTION);
-            Serial.println(AT_OK_STRING);
-            readString = "";
-          }
-          else
-          {
-            // Parsing the command
-            res = at_parse_line((string_t)readString.c_str(), (byte*)ret);
-
-            readString = "";
-
-            if (res == AT_OK)
-            {
-              if (ms_strlen((string_t)ret) > 0)
-              {
-                String s_ret(ret);
-                Serial.println(s_ret);
-              }
-              Serial.println(AT_OK_STRING);
-            }
-            else
-            {
-              Serial.println(AT_ERROR_STRING);
-            }
-          }
-        }
-      }
-    } // end serial available
-  } // end while
-}
-
 void loop()
 {
   executeCounters(&current_state);
-  processAtCommands();
   delay(1);
 }
 
