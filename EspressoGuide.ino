@@ -60,7 +60,7 @@ CURRENT_STATE current_state;
 #define PIN_CS                6
 #define PIN_CLK               5
 #define WELCOME_SCREEN_DELAY  1 /* sec */
-#define BREW_COUNTER_DELAY    2 /* sec */
+#define BREW_COUNTER_DELAY    0 /* sec */
 #define SLOPE_DELTA           0.02
 
 #define DEVICE_DESCRIPTION "EspressoGuide v0.0.1"
@@ -329,7 +329,7 @@ uint16_t getNumberWidth(uint16_t number)
     width += (getDigitWidth(digits[i]) + 2);
   }
 
-  return width;
+  return width - 2;
 }
 
 void printNumber(uint16_t number, POINT *origin)
@@ -345,14 +345,26 @@ void printNumber(uint16_t number, POINT *origin)
   }
 }
 
-uint16_t drawMainNumber(uint16_t y, uint16_t number)
+void dottedLineV(uint16_t x, int16_t y, int16_t width)
+{
+  for (int i = 0; i < width; i+=2)
+  {
+    uView.pixel(x + i, y);
+  }
+}
+
+uint16_t drawMainNumber(uint16_t number)
 {
   POINT origin;
   int height = 21;
-  origin.y = y;
-  origin.x = SCREEN_WIDTH / 2 - getNumberWidth(number) / 2;
+  int width = getNumberWidth(number);
+  origin.y = 7;
+  origin.x = SCREEN_WIDTH / 2 - width / 2;
   printNumber(number, &origin);
-  return origin.y + height;
+  
+  uView.lineH(origin.x, origin.y + 24, width);
+  
+  return origin.y + height + 4;
 }
 
 void drawTrendArrow(byte rising)
@@ -368,48 +380,19 @@ void drawTrendArrow(byte rising)
     }
     else
     {
-      uView.line(SCREEN_WIDTH / 2 - (height - y - 1), SCREEN_HEIGHT - height + y, SCREEN_WIDTH / 2 + (height - y - 1), SCREEN_HEIGHT - height + y);
+      uView.line(SCREEN_WIDTH / 2 - (height - y - 1), SCREEN_HEIGHT - height + y + 1, SCREEN_WIDTH / 2 + (height - y - 1), SCREEN_HEIGHT - height + y + 1);
     }
   }
 }
 
-
-void drawIdleScreen(CURRENT_STATE *state)
+void drawSubInformation(uint8_t y, const char *buff)
 {
-  char buff[10];
-  /*uView.setCursor(0, 0);
-  sprintf(buff, "%02d", (int)state->temperature);
+  uView.setCursor(SCREEN_WIDTH / 2 - strlen(buff) * (uView.getFontWidth() + 1) / 2, y + 3);
   uView.print(buff);
+}
 
-
-  uView.setCursor(0, 15);
-  formatTime(&state->run_time, buff);
-  uView.print(buff);*/
-
-  //uView.rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-  uint16_t temperature = (int)state->temperature;
-
-  uint16_t y = drawMainNumber(9, temperature);
-
-  formatTime(&state->run_time, buff);
-  uView.setCursor(SCREEN_WIDTH / 2 - strlen(buff) * (uView.getFontWidth() + 1) / 2 - 1, y + 4);
-  uView.print(buff);
-
-/*
-  uView.setCursor(0, 0);
-  sprintf(buff, "%02d", state->run_time.minutes);
-  uView.print(buff);
-  
-  sprintf(buff, "%02d", state->run_time.seconds);
-  uView.setCursor(SCREEN_WIDTH - strlen(buff) * (uView.getFontWidth() + 1), 0);
-  uView.print(buff);
-
-  sprintf(buff, "%02d", state->run_time.hours);
-  uView.setCursor(0, SCREEN_HEIGHT - uView.getFontHeight());
-  uView.print(buff);
-  */
-  
+void drawTempTrend(CURRENT_STATE *state)
+{
   /* Draw the trend arrow to indicate the rising or falling temperature */
   if (state->blink_counter < 2)
   {
@@ -425,16 +408,33 @@ void drawIdleScreen(CURRENT_STATE *state)
   }
 }
 
+
+void drawIdleScreen(CURRENT_STATE *state)
+{
+  char buff[10];
+
+  uint16_t main_number = state->pump ? state->brew_time.seconds : (int)state->temperature;
+
+  uint16_t y = drawMainNumber(main_number);
+
+  formatTime(&state->run_time, buff);
+  drawSubInformation(y, buff);
+  
+  drawTempTrend(state);
+}
+
 void drawBrewScreen(CURRENT_STATE *state)
 {
   char buff[10];
-  uView.setCursor(0, 0);
-  sprintf(buff, "%02d", state->brew_time.seconds);
-  uView.print(buff);
+  
+  uint16_t y = drawMainNumber(state->brew_time.seconds);
 
-  uView.setCursor(0, 15);
+  uView.rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
   sprintf(buff, "%02d", (int)state->temperature);
-  uView.print(buff);
+  drawSubInformation(y, buff);
+
+  drawTempTrend(state);
 }
 
 
