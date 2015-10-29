@@ -13,7 +13,7 @@ image_name = "../icons/steam.jpg"
 #image_name = "../icons/toocold.jpg"
 #image_name = "../icons/toohot.jpg"
 
-def convert_icon(image_name):
+def convert_icon(image_name, no_meta=False):
     var_name = os.path.splitext(basename(image_name))[0]
     im = Image.open(image_name)
 
@@ -37,12 +37,17 @@ def convert_icon(image_name):
 
     output += ", ".join(hex_data) + "};\n"
 
-    output += "const int icon_count_{0} = {1};\n".format(var_name, len(hex_data))
-    output += "const int icon_width_{0} = {1};".format(var_name, im.size[0])
+    if not no_meta:
+        output += "const int icon_count_{0} = {1};\n".format(var_name, len(hex_data))
+        output += "const int icon_width_{0} = {1};".format(var_name, im.size[0])
 
     return output
 
 print convert_icon("../icons/welcome.jpg")
+print convert_icon("../icons/trend_up_big.jpg")
+print convert_icon("../icons/trend_down_big.jpg")
+print convert_icon("../icons/trend_up_small.jpg")
+print convert_icon("../icons/trend_down_small.jpg")
 
 font_icons = [
     'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'
@@ -51,16 +56,15 @@ font_icons = [
 for icon in font_icons:
     image_name = "../icons/fonts/{0}.jpg".format(icon)
     print convert_icon(image_name)
-    print ""
 
 
-print("\n")
-i = 0
-for icon in font_icons:
-    print("case {1}: DRAW_DIGIT({0}, x, y); break;".format(icon, i))
-    i += 1
-
-i = 0
-for icon in font_icons:
-    print("case {1}: return DIGIT_WIDTH({0});".format(icon, i))
-    i += 1
+# print("\n")
+# i = 0
+# for icon in font_icons:
+#     print("case {1}: DRAW_DIGIT({0}, x, y); break;".format(icon, i))
+#     i += 1
+#
+# i = 0
+# for icon in font_icons:
+#     print("case {1}: return DIGIT_WIDTH({0});".format(icon, i))
+#     i += 1
