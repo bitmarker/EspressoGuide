@@ -1,36 +1,45 @@
+/*
+  EspressoGuide
+  Copyright (C) 2015 Leonid Lezner
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "utils.h"
 #include "espresso_guide.h"
 #include <MicroView.h>
 #include <TSIC.h>
 #include "imagedata.h"
 
-
-#define DRAW_ICON(name, x, y) drawIcon(icon_data_##name, icon_count_##name, x, y);
-#define ICON_WIDTH(name) icon_width_##name
-
-#define printv(name) Serial.print(#name); Serial.print(": "); Serial.println(name);
-
 CURRENT_STATE current_state;
 
-#define MAX_ICONS             10
+/* Define constants */
 #define MAX_COUNTERS          6
 #define PIN_PUMP_MEAS         A0
 #define PIN_DO                3
 #define PIN_CS                6
 #define PIN_CLK               5
-#define WELCOME_SCREEN_DELAY  3 /* sec */
-#define BREW_COUNTER_DELAY    2 /* sec */
+#define WELCOME_SCREEN_DELAY  3 /* seconds */
+#define BREW_COUNTER_DELAY    2 /* seconds */
 #define SLOPE_DELTA           0.03
+#define FONT_CHAR_HEIGHT      20 /* pixels */
+#define DEVICE_DESCRIPTION    "EspressoGuide v0.1.0"
 
-#define FONT_CHAR_HEIGHT      20
-
-#define DEVICE_DESCRIPTION "EspressoGuide v0.0.1"
-
+/* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
-
 uint16_t SCREEN_WIDTH = uView.getLCDWidth();
 uint16_t SCREEN_HEIGHT = uView.getLCDHeight();
-
 TSIC mainTempSensor(4, 2);
 
 void setupPins()
@@ -144,6 +153,7 @@ void setupState()
 void setupSerial()
 {
   Serial.begin(115200);
+  Serial.println(DEVICE_DESCRIPTION);
 }
 
 void updateClock(CURRENT_STATE *state)
@@ -414,7 +424,7 @@ void drawIdleScreen(CURRENT_STATE *state)
 {
   char buff[10];
 
-  uint16_t main_number = state->pump ? state->brew_time.seconds : (int)state->temperature;
+  uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : (int)state->temperature;
 
   uint16_t y = drawMainNumber(main_number, state);
 
