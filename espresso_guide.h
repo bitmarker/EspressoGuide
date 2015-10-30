@@ -110,6 +110,8 @@ typedef struct __current_state
   
   /* Temperature data */
   MEAS_DATA temp_data;
+
+  unsigned long error_counter;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);

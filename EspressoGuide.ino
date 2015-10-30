@@ -25,22 +25,25 @@
 CURRENT_STATE current_state;
 
 /* Define constants */
-#define MAX_COUNTERS          6
+
+
 #define PIN_PUMP_MEAS         A0
-#define PIN_DO                3
-#define PIN_CS                6
-#define PIN_CLK               5
+#define PIN_DI                3
+#define PIN_VCC               2
+
+#define MAX_ALLOWED_ERRORS    100
 #define WELCOME_SCREEN_DELAY  3 /* seconds */
 #define BREW_COUNTER_DELAY    2 /* seconds */
 #define SLOPE_DELTA           0.03
 #define FONT_CHAR_HEIGHT      20 /* pixels */
+#define MAX_COUNTERS          6
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.1.0"
 
 /* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
 uint16_t SCREEN_WIDTH = uView.getLCDWidth();
 uint16_t SCREEN_HEIGHT = uView.getLCDHeight();
-TSIC mainTempSensor(4, 2);
+TSIC mainTempSensor(PIN_DI, PIN_VCC);
 
 void setupPins()
 {
@@ -54,22 +57,28 @@ byte measurePumpState()
 
 double measureMainTemperature()
 {
-  /*
   uint16_t temp_raw;
   double temp;
-
-  if(mainTempSensor.getTemperature(&temp_raw))
+  uint8_t res;
+  
+  noInterrupts();
+  res = mainTempSensor.getTemperature(&temp_raw);
+  interrupts();
+  
+  if(res)
   {
-    Serial.print("uint_16: ");
-    Serial.println(temp_raw);
     temp = mainTempSensor.calc_Celsius(&temp_raw);
     Serial.print("Temperature: ");
     Serial.print(temp);
     Serial.println(" °C");
+    return temp;
   }
-  */
+  else
+  {
+    Serial.println("--> Error!");
+  }
 
-  return analogRead(A1) / 1024.0 * 300.0;
+  return NAN;
 }
 
 /**
@@ -142,6 +151,7 @@ void setupDisplay()
 
 void setupState()
 {
+  current_state.error_counter = 0;
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
   initTime(&current_state.run_time);
@@ -207,7 +217,7 @@ void setupCounters()
   initCounter(&counters[1], 500, selectScreen);
   initCounter(&counters[2], 1000, updateClock);
   initCounter(&counters[3], 250, updateAuxCounters);
-  initCounter(&counters[4], 250, updateDisplay);
+  initCounter(&counters[4], 500, updateDisplay);
   initCounter(&counters[5], 500, updatePumpState);
 }
 
@@ -243,6 +253,8 @@ void drawErrorScreen(CURRENT_STATE *state)
   {
     case ERROR_SENSOR:
       uView.print("Sensor\nerror!");
+      break;
+    case ERROR_NONE:
       break;
     default:
       uView.print("Unknown\nerror!");
@@ -424,12 +436,15 @@ void drawIdleScreen(CURRENT_STATE *state)
 {
   char buff[10];
 
-  uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : (int)state->temperature;
+  uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
 
   uint16_t y = drawMainNumber(main_number, state);
 
   formatTime(&state->run_time, buff);
   drawSubInformation(y, buff, state);
+
+  uView.setCursor(0, 0);
+  uView.print(state->error_counter);
 }
 
 
@@ -448,7 +463,7 @@ void drawBrewScreen(CURRENT_STATE *state)
     dottedLineV(SCREEN_WIDTH - 1, 1, SCREEN_HEIGHT);
   }
   
-  sprintf(buff, "%02d", (int)state->temperature);
+  sprintf(buff, "%02d", round(state->temperature));
   drawSubInformation(y, buff, state);
 }
 
@@ -565,14 +580,24 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   double t = measureMainTemperature();
 
   /* If the temperature is NaN or zero, set the error flag */
-  if (isnan(t) || t < 0.1)
+  if (isnan(t) || t < 0.1 || t > 200)
   {
-    state->error = ERROR_SENSOR;
+    if(state->error_counter <= MAX_ALLOWED_ERRORS)
+    {
+      state->error_counter++;
+    }
+    else
+    {
+      //state->error_counter = 0;
+      state->error = ERROR_SENSOR;
+    }
+    
     t = 0;
     return;
   }
   else
   {
+    //state->error_counter = 0;
     state->error = ERROR_NONE;
     state->temperature_fast = t;
   }
@@ -581,7 +606,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   addNextValue(&state->temp_data, state->temperature_fast);
 
   /* Build the filtered value */
-  state->temperature = state->temp_data.average;
+  state->temperature = state->temperature_fast;
 
   /* Set the trend value corresponding to the slope */
   if (state->temp_data.slope > SLOPE_DELTA)
