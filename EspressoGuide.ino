@@ -372,11 +372,28 @@ void drawTrendArrow(byte rising, uint16_t y_center, uint16_t distance, uint8_t i
   }
 }
 
-void drawSubInformation(uint8_t y, const char *buff, CURRENT_STATE *state)
+void drawSubInformation(uint8_t y, const char *buff, CURRENT_STATE *state, uint16_t main_width)
 {
   y += 3;
+
+  uint16_t width = strlen(buff) * (uView.getFontWidth() + 1) - 1;
+
+  uint16_t x = SCREEN_WIDTH / 2 - width / 2;
+
+  uint16_t lineWidth = width;
+
+  if(main_width > width)
+  {
+    lineWidth = main_width;
+  }
+  else
+  {
+    lineWidth = width;
+  }
+
+  uView.lineH(SCREEN_WIDTH / 2 - (lineWidth + 6) / 2, y - 4, lineWidth + 6);
   
-  uView.setCursor(SCREEN_WIDTH / 2 - strlen(buff) * (uView.getFontWidth() + 1) / 2, y);
+  uView.setCursor(x, y);
   uView.print(buff);
 
   if(state->screen == SCREEN_BREW)
@@ -386,23 +403,21 @@ void drawSubInformation(uint8_t y, const char *buff, CURRENT_STATE *state)
 }
 
 
-uint16_t drawMainNumber(uint16_t number, CURRENT_STATE *state)
+void drawMainNumber(uint16_t number, CURRENT_STATE *state, uint16_t *offset, uint16_t *width)
 {
   POINT origin;
   int height = FONT_CHAR_HEIGHT;
-  int width = getNumberWidth(number);
+  *width = getNumberWidth(number);
   origin.y = 7;
-  origin.x = SCREEN_WIDTH / 2 - width / 2;
+  origin.x = SCREEN_WIDTH / 2 - *width / 2;
   printNumber(number, &origin);
   
-  uView.lineH(origin.x, origin.y + FONT_CHAR_HEIGHT + 3, width);
-
   if(state->screen == SCREEN_IDLE)
   {
-    drawTempTrend(state, origin.y + height/2, width + 1, 1);
+    drawTempTrend(state, origin.y + height/2, *width + 1, 1);
   }
   
-  return origin.y + height + 4;
+  *offset = origin.y + height + 4;
 }
 
 void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, uint8_t icon_type)
@@ -426,21 +441,19 @@ void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, u
 void drawIdleScreen(CURRENT_STATE *state)
 {
   char buff[10];
-
+  uint16_t y, width;
   uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
-
-  uint16_t y = drawMainNumber(main_number, state);
-
+  drawMainNumber(main_number, state, &y, &width);
   formatTime(&state->run_time, buff);
-  drawSubInformation(y, buff, state);
+  drawSubInformation(y, buff, state, width);
 }
 
 
 void drawBrewScreen(CURRENT_STATE *state)
 {
   char buff[10];
-  
-  uint16_t y = drawMainNumber(state->brew_time.seconds, state);
+  uint16_t y, width;
+  drawMainNumber(state->brew_time.seconds, state, &y, &width);
 
   /* Draw a border when brewing. Blink when delay counter is not zero */
   if(state->brew_counter_delay == 0 || state->blink_counter < 2)
@@ -452,11 +465,8 @@ void drawBrewScreen(CURRENT_STATE *state)
   }
   
   sprintf(buff, "%02d", round(state->temperature));
-  
-  drawSubInformation(y, buff, state);
+  drawSubInformation(y, buff, state, width);
 }
-
-
 
 
 /***
