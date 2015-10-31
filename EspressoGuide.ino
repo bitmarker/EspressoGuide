@@ -25,13 +25,11 @@
 CURRENT_STATE current_state;
 
 /* Define constants */
-
-
 #define PIN_PUMP_MEAS         A0
 #define PIN_DI                3
 #define PIN_VCC               2
 
-#define MAX_ALLOWED_ERRORS    100
+#define MAX_ALLOWED_ERRORS    5
 #define WELCOME_SCREEN_DELAY  3 /* seconds */
 #define BREW_COUNTER_DELAY    2 /* seconds */
 #define SLOPE_DELTA           0.03
@@ -68,14 +66,7 @@ double measureMainTemperature()
   if(res)
   {
     temp = mainTempSensor.calc_Celsius(&temp_raw);
-    Serial.print("Temperature: ");
-    Serial.print(temp);
-    Serial.println(" °C");
     return temp;
-  }
-  else
-  {
-    Serial.println("--> Error!");
   }
 
   return NAN;
@@ -442,9 +433,6 @@ void drawIdleScreen(CURRENT_STATE *state)
 
   formatTime(&state->run_time, buff);
   drawSubInformation(y, buff, state);
-
-  uView.setCursor(0, 0);
-  uView.print(state->error_counter);
 }
 
 
@@ -464,6 +452,7 @@ void drawBrewScreen(CURRENT_STATE *state)
   }
   
   sprintf(buff, "%02d", round(state->temperature));
+  
   drawSubInformation(y, buff, state);
 }
 
@@ -580,7 +569,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   double t = measureMainTemperature();
 
   /* If the temperature is NaN or zero, set the error flag */
-  if (isnan(t) || t < 0.1 || t > 200)
+  if (isnan(t) || t < 0.1 || t > 250)
   {
     if(state->error_counter <= MAX_ALLOWED_ERRORS)
     {
@@ -588,7 +577,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     }
     else
     {
-      //state->error_counter = 0;
+      state->error_counter = 0;
       state->error = ERROR_SENSOR;
     }
     
@@ -597,7 +586,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   }
   else
   {
-    //state->error_counter = 0;
+    state->error_counter = 0;
     state->error = ERROR_NONE;
     state->temperature_fast = t;
   }
