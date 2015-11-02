@@ -36,6 +36,7 @@ CURRENT_STATE current_state;
 #define FONT_CHAR_HEIGHT      20 /* pixels */
 #define MAX_COUNTERS          6
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.1.0"
+#define PUMP_THRESHOLD        15
 
 /* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
@@ -50,7 +51,9 @@ void setupPins()
 
 byte measurePumpState()
 {
-  return analogRead(PIN_PUMP_MEAS) > 512;
+  uint16_t pump_val = 0;
+  pump_val = analogRead(PIN_PUMP_MEAS);
+  return pump_val > PUMP_THRESHOLD;
 }
 
 double measureMainTemperature()
@@ -209,7 +212,7 @@ void setupCounters()
   initCounter(&counters[2], 1000, updateClock);
   initCounter(&counters[3], 250, updateAuxCounters);
   initCounter(&counters[4], 500, updateDisplay);
-  initCounter(&counters[5], 500, updatePumpState);
+  initCounter(&counters[5], 250, updatePumpState);
 }
 
 
@@ -453,10 +456,18 @@ void drawBrewScreen(CURRENT_STATE *state)
 {
   char buff[10];
   uint16_t y, width;
-  drawMainNumber(state->brew_time.seconds, state, &y, &width);
-
+  
+  if (state->brew_counter_delay > 0)
+  {
+    drawMainNumber(state->brew_counter_delay, state, &y, &width);
+  }
+  else
+  {
+    drawMainNumber(state->brew_time.seconds, state, &y, &width);
+  }
+  
   /* Draw a border when brewing. Blink when delay counter is not zero */
-  if(state->brew_counter_delay == 0 || state->blink_counter < 2)
+  if(state->brew_counter_delay == 0 || state->blink_counter % 2 == 0)
   {
     dottedLineH(0, 0, SCREEN_WIDTH);
     dottedLineH(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH);
