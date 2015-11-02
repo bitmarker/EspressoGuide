@@ -96,9 +96,6 @@ typedef struct __current_state
   /* Shot was done */
   SHOT_STATE shot_state;
   
-  /* Delay before the brew counter starts */
-  unsigned char brew_counter_delay;
-  
   /* Temperature trend (-1, 0, 1) */
   int temp_trend;
   

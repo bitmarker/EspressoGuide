@@ -31,7 +31,6 @@ CURRENT_STATE current_state;
 
 #define MAX_ALLOWED_ERRORS    5
 #define WELCOME_SCREEN_DELAY  3 /* seconds */
-#define BREW_COUNTER_DELAY    2 /* seconds */
 #define SLOPE_DELTA           0.03
 #define FONT_CHAR_HEIGHT      20 /* pixels */
 #define MAX_COUNTERS          6
@@ -166,15 +165,7 @@ void updateClock(CURRENT_STATE *state)
 
   if (state->shot_state == SHOT_BREWING)
   {
-    /* Starts counting the brew time only when the delay is over */
-    if (state->brew_counter_delay > 0)
-    {
-      state->brew_counter_delay--;
-    }
-    else
-    {
-      incrementSeconds(&state->brew_time);
-    }
+    incrementSeconds(&state->brew_time);
   }
 
   /* Count down the welcome counter */
@@ -208,10 +199,10 @@ void setupCounters()
   i = 0;
 
   initCounter(&counters[0], 500, updateCurrentTemperature);
-  initCounter(&counters[1], 500, selectScreen);
+  initCounter(&counters[1], 250, selectScreen);
   initCounter(&counters[2], 1000, updateClock);
   initCounter(&counters[3], 250, updateAuxCounters);
-  initCounter(&counters[4], 500, updateDisplay);
+  initCounter(&counters[4], 250, updateDisplay);
   initCounter(&counters[5], 250, updatePumpState);
 }
 
@@ -457,23 +448,12 @@ void drawBrewScreen(CURRENT_STATE *state)
   char buff[10];
   uint16_t y, width;
   
-  if (state->brew_counter_delay > 0)
-  {
-    drawMainNumber(state->brew_counter_delay, state, &y, &width);
-  }
-  else
-  {
-    drawMainNumber(state->brew_time.seconds, state, &y, &width);
-  }
+  drawMainNumber(state->brew_time.seconds, state, &y, &width);
   
-  /* Draw a border when brewing. Blink when delay counter is not zero */
-  if(state->brew_counter_delay == 0 || state->blink_counter % 2 == 0)
-  {
-    dottedLineH(0, 0, SCREEN_WIDTH);
-    dottedLineH(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH);
-    dottedLineV(0, 0, SCREEN_HEIGHT);
-    dottedLineV(SCREEN_WIDTH - 1, 1, SCREEN_HEIGHT);
-  }
+  dottedLineH(0, 0, SCREEN_WIDTH);
+  dottedLineH(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH);
+  dottedLineV(0, 0, SCREEN_HEIGHT);
+  dottedLineV(SCREEN_WIDTH - 1, 1, SCREEN_HEIGHT);
   
   sprintf(buff, "%02d", round(state->temperature));
   drawSubInformation(y, buff, state, width);
@@ -485,8 +465,6 @@ void drawBrewScreen(CURRENT_STATE *state)
  */
 void updateDisplay(CURRENT_STATE *state)
 {
-  char temp[6];
-
   uView.clear(PAGE);
 
   switch (state->screen)
@@ -533,7 +511,6 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
     {
       /* Reset the brew time */
       initTime(&state->brew_time);
-      state->brew_counter_delay = BREW_COUNTER_DELAY;
       state->shot_state = SHOT_BREWING;
     }
   }
