@@ -34,8 +34,8 @@ CURRENT_STATE current_state;
 #define SLOPE_DELTA           0.03
 #define FONT_CHAR_HEIGHT      20 /* pixels */
 #define MAX_COUNTERS          6
-#define DEVICE_DESCRIPTION    "EspressoGuide v0.1.0"
-#define PUMP_THRESHOLD        15
+#define DEVICE_DESCRIPTION    "EspressoGuide v0.1.5"
+#define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
 
 /* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
@@ -60,12 +60,12 @@ double measureMainTemperature()
   uint16_t temp_raw;
   double temp;
   uint8_t res;
-  
+
   noInterrupts();
   res = mainTempSensor.getTemperature(&temp_raw);
   interrupts();
-  
-  if(res)
+
+  if (res)
   {
     temp = mainTempSensor.calc_Celsius(&temp_raw);
     return temp;
@@ -315,7 +315,7 @@ void printNumber(uint16_t number, POINT *origin)
 
 void dottedLineH(uint16_t x, int16_t y, int16_t width)
 {
-  for (int i = 0; i < width; i+=2)
+  for (int i = 0; i < width; i += 2)
   {
     uView.pixel(x + i, y);
   }
@@ -323,7 +323,7 @@ void dottedLineH(uint16_t x, int16_t y, int16_t width)
 
 void dottedLineV(uint16_t x, int16_t y, int16_t height)
 {
-  for (int i = 0; i < height; i+=2)
+  for (int i = 0; i < height; i += 2)
   {
     uView.pixel(x, y + i);
   }
@@ -336,12 +336,12 @@ void drawTrendArrow(byte rising, uint16_t y_center, uint16_t distance, uint8_t i
   uint8_t icon_height = (icon_type == 1) ? 16 : 8;
   uint8_t icon_width = (icon_type == 1) ? 8 : 8;
 
-  if(rising)
+  if (rising)
   {
     x = SCREEN_WIDTH / 2 + (distance) / 2;
-    y = y_center - icon_height/2;
+    y = y_center - icon_height / 2;
 
-    if(icon_type == 1)
+    if (icon_type == 1)
     {
       DRAW_ICON(trend_up_big, x, y);
     }
@@ -353,9 +353,9 @@ void drawTrendArrow(byte rising, uint16_t y_center, uint16_t distance, uint8_t i
   else
   {
     x = SCREEN_WIDTH / 2 - (distance) / 2 - icon_width;
-    y = y_center - icon_height/2;
+    y = y_center - icon_height / 2;
 
-    if(icon_type == 1)
+    if (icon_type == 1)
     {
       DRAW_ICON(trend_down_big, x, y);
     }
@@ -376,7 +376,7 @@ void drawSubInformation(uint8_t y, const char *buff, CURRENT_STATE *state, uint1
 
   uint16_t lineWidth = width;
 
-  if(main_width > width)
+  if (main_width > width)
   {
     lineWidth = main_width;
   }
@@ -386,11 +386,11 @@ void drawSubInformation(uint8_t y, const char *buff, CURRENT_STATE *state, uint1
   }
 
   uView.lineH(SCREEN_WIDTH / 2 - (lineWidth + 6) / 2, y - 4, lineWidth + 6);
-  
+
   uView.setCursor(x, y);
   uView.print(buff);
 
-  if(state->screen == SCREEN_BREW)
+  if (state->screen == SCREEN_BREW)
   {
     drawTempTrend(state, y + uView.getFontHeight() / 2, strlen(buff) * (uView.getFontWidth() + 1) + 2, 2);
   }
@@ -405,12 +405,12 @@ void drawMainNumber(uint16_t number, CURRENT_STATE *state, uint16_t *offset, uin
   origin.y = 7;
   origin.x = SCREEN_WIDTH / 2 - *width / 2;
   printNumber(number, &origin);
-  
-  if(state->screen == SCREEN_IDLE)
+
+  if (state->screen == SCREEN_IDLE)
   {
-    drawTempTrend(state, origin.y + height/2, *width + 1, 1);
+    drawTempTrend(state, origin.y + height / 2, *width + 1, 1);
   }
-  
+
   *offset = origin.y + height + 4;
 }
 
@@ -447,14 +447,14 @@ void drawBrewScreen(CURRENT_STATE *state)
 {
   char buff[10];
   uint16_t y, width;
-  
+
   drawMainNumber(state->brew_time.seconds, state, &y, &width);
-  
+
   dottedLineH(0, 0, SCREEN_WIDTH);
   dottedLineH(1, SCREEN_HEIGHT - 1, SCREEN_WIDTH);
   dottedLineV(0, 0, SCREEN_HEIGHT);
   dottedLineV(SCREEN_WIDTH - 1, 1, SCREEN_HEIGHT);
-  
+
   sprintf(buff, "%02d", round(state->temperature));
   drawSubInformation(y, buff, state, width);
 }
@@ -569,7 +569,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   /* If the temperature is NaN or zero, set the error flag */
   if (isnan(t) || t < 0.1 || t > 250)
   {
-    if(state->error_counter <= MAX_ALLOWED_ERRORS)
+    if (state->error_counter <= MAX_ALLOWED_ERRORS)
     {
       state->error_counter++;
     }
@@ -578,7 +578,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
       state->error_counter = 0;
       state->error = ERROR_SENSOR;
     }
-    
+
     t = 0;
     return;
   }
