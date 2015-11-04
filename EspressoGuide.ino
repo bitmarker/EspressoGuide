@@ -37,6 +37,9 @@ CURRENT_STATE current_state;
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.1.5"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
 
+#define TIMER_PRELOAD         49911
+#define COUNTER_INCREMENT     250 /* 1 kHz/4 Hz */
+
 /* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
 uint16_t SCREEN_WIDTH = uView.getLCDWidth();
@@ -79,36 +82,36 @@ double measureMainTemperature()
  */
 void setupTimer()
 {
-  /* disable all interrupts */
   noInterrupts();
   TCCR1A = 0;
   TCCR1B = 0;
-  TCNT1  = 0;
-  OCR1A = 16000 / 64;                     /* compare match register 16MHz/64/1000Hz */
-  TCCR1B |= (1 << WGM12);                 /* CTC mode */
-  TCCR1B |= (1 << CS11) | (1 << CS10);    /* 64 prescaler */
-  TIMSK1 |= (1 << OCIE1A);                /* enable timer compare interrupt */
-  interrupts();                           /* enable all interrupts */
+  TCNT1 = TIMER_PRELOAD; /* preload counter for 4 Hz */
+  TCCR1B |= (1 << CS12); /* 256 prescaler */
+  TIMSK1 |= (1 << TOIE1);
+  interrupts();
 }
-
 
 /**
  * Timer ISR
  */
-ISR(TIMER1_COMPA_vect)
+ISR(TIMER1_OVF_vect)
 {
   uint16_t i;
+
+  /* Set the timer */
+  TCNT1 = TIMER_PRELOAD;
+
   for (i = 0; i < MAX_COUNTERS; i++)
   {
     /* Check if the callback function is set */
     if (counters[i].callback != 0 && counters[i].elapsed != 1)
     {
       /* Increment the counter */
-      counters[i].count++;
+      counters[i].count += COUNTER_INCREMENT;
 
       /* Counter has reached the interval, set elapsed flag to 1,
          so the callback can be executed */
-      if (counters[i].count > counters[i].interval)
+      if (counters[i].count >= counters[i].interval)
       {
         counters[i].count = 0;
         counters[i].elapsed = 1;
