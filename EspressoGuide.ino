@@ -64,9 +64,9 @@ double measureMainTemperature()
   double temp;
   uint8_t res;
 
-  noInterrupts();
+  //noInterrupts();
   res = mainTempSensor.getTemperature(&temp_raw);
-  interrupts();
+  //interrupts();
 
   if (res)
   {
