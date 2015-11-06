@@ -38,7 +38,7 @@ CURRENT_STATE current_state;
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.1.5"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
 #define MAX_IDLE_TIME         20 /* minutes */
-#define BREW_WARN_TIME        3 /* seconds */
+#define BREW_WARN_TIME        25 /* seconds */
 
 #define TIMER_PRELOAD         49911
 #define COUNTER_INCREMENT     250 /* 1 kHz/4 Hz */
@@ -450,10 +450,12 @@ void soundNotification(CURRENT_STATE *state)
     if (state->blink_counter < 2)
     {
       turnOnBuzzer(1);
+      uView.invert(1);
     }
     else
     {
       turnOnBuzzer(0);
+      uView.invert(0);
     }
   }
 
@@ -463,10 +465,12 @@ void soundNotification(CURRENT_STATE *state)
     if (state->blink_counter == 0)
     {
       turnOnBuzzer(1);
+      uView.invert(1);
     }
     else
     {
       turnOnBuzzer(0);
+      uView.invert(0);
     }
   }
 }
