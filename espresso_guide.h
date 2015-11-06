@@ -93,6 +93,8 @@ typedef struct __current_state
   /* Time since the pump was turned on */
   TIME brew_time;
   
+  TIME buzzer_time;
+  
   /* Shot was done */
   SHOT_STATE shot_state;
   

@@ -28,6 +28,7 @@ CURRENT_STATE current_state;
 #define PIN_PUMP_MEAS         A0
 #define PIN_DI                3
 #define PIN_VCC               2
+#define PIN_BUZZER            A1
 
 #define MAX_ALLOWED_ERRORS    5
 #define WELCOME_SCREEN_DELAY  3 /* seconds */
@@ -36,6 +37,8 @@ CURRENT_STATE current_state;
 #define MAX_COUNTERS          6
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.1.5"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
+#define MAX_IDLE_TIME         20 /* minutes */
+#define BREW_WARN_TIME        3 /* seconds */
 
 #define TIMER_PRELOAD         49911
 #define COUNTER_INCREMENT     250 /* 1 kHz/4 Hz */
@@ -49,6 +52,12 @@ TSIC mainTempSensor(PIN_DI, PIN_VCC);
 void setupPins()
 {
   pinMode(PIN_PUMP_MEAS, INPUT);
+  pinMode(PIN_BUZZER, OUTPUT);
+}
+
+void turnOnBuzzer(uint8_t state)
+{
+  digitalWrite(PIN_BUZZER, state);
 }
 
 byte measurePumpState()
@@ -64,9 +73,7 @@ double measureMainTemperature()
   double temp;
   uint8_t res;
 
-  //noInterrupts();
   res = mainTempSensor.getTemperature(&temp_raw);
-  //interrupts();
 
   if (res)
   {
@@ -151,6 +158,7 @@ void setupState()
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
   initTime(&current_state.run_time);
+  initTime(&current_state.buzzer_time);
   initTime(&current_state.brew_time);
   current_state.welcome_counter = WELCOME_SCREEN_DELAY;
   initMeasData(&current_state.temp_data);
@@ -165,6 +173,7 @@ void setupSerial()
 void updateClock(CURRENT_STATE *state)
 {
   incrementSeconds(&state->run_time);
+  incrementSeconds(&state->buzzer_time);
 
   if (state->shot_state == SHOT_BREWING)
   {
@@ -434,6 +443,33 @@ void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, u
   }
 }
 
+void soundNotification(CURRENT_STATE *state)
+{
+  if (state->buzzer_time.minutes >= MAX_IDLE_TIME && state->pump == 0)
+  {
+    if (state->blink_counter < 2)
+    {
+      turnOnBuzzer(1);
+    }
+    else
+    {
+      turnOnBuzzer(0);
+    }
+  }
+
+  if ((state->brew_time.seconds >= BREW_WARN_TIME) &&
+      (state->brew_time.seconds < BREW_WARN_TIME + 1) && (state->pump == 1))
+  { 
+    if (state->blink_counter == 0)
+    {
+      turnOnBuzzer(1);
+    }
+    else
+    {
+      turnOnBuzzer(0);
+    }
+  }
+}
 
 void drawIdleScreen(CURRENT_STATE *state)
 {
@@ -443,6 +479,8 @@ void drawIdleScreen(CURRENT_STATE *state)
   drawMainNumber(main_number, state, &y, &width);
   formatTime(&state->run_time, buff);
   drawSubInformation(y, buff, state, width);
+
+  soundNotification(state);
 }
 
 
@@ -460,6 +498,8 @@ void drawBrewScreen(CURRENT_STATE *state)
 
   sprintf(buff, "%02d", round(state->temperature));
   drawSubInformation(y, buff, state, width);
+
+  soundNotification(state);
 }
 
 
@@ -514,6 +554,7 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
     {
       /* Reset the brew time */
       initTime(&state->brew_time);
+      initTime(&current_state.buzzer_time);
       state->shot_state = SHOT_BREWING;
     }
   }
