@@ -35,10 +35,11 @@ CURRENT_STATE current_state;
 #define SLOPE_DELTA           0.03
 #define FONT_CHAR_HEIGHT      20 /* pixels */
 #define MAX_COUNTERS          6
-#define DEVICE_DESCRIPTION    "EspressoGuide v0.1.5"
+#define DEVICE_DESCRIPTION    "EspressoGuide v0.2.1"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
-#define MAX_IDLE_TIME         20 /* minutes */
-#define BREW_WARN_TIME        25 /* seconds */
+#define MAX_IDLE_TIME         25 /* minutes */
+#define BREW_WARN_TIME        20 /* seconds */
+#define MIN_BREW_TIME         3  /* seconds */
 
 #define TIMER_PRELOAD         49911
 #define COUNTER_INCREMENT     250 /* 1 kHz/4 Hz */
@@ -158,7 +159,7 @@ void setupState()
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
   initTime(&current_state.run_time);
-  initTime(&current_state.buzzer_time);
+  initTime(&current_state.idle_time);
   initTime(&current_state.brew_time);
   current_state.welcome_counter = WELCOME_SCREEN_DELAY;
   initMeasData(&current_state.temp_data);
@@ -173,7 +174,7 @@ void setupSerial()
 void updateClock(CURRENT_STATE *state)
 {
   incrementSeconds(&state->run_time);
-  incrementSeconds(&state->buzzer_time);
+  incrementSeconds(&state->idle_time);
 
   if (state->shot_state == SHOT_BREWING)
   {
@@ -443,9 +444,10 @@ void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, u
   }
 }
 
-void soundNotification(CURRENT_STATE *state)
+void idleNotification(CURRENT_STATE *state)
 {
-  if (state->buzzer_time.minutes >= MAX_IDLE_TIME && state->pump == 0)
+  /* Start notification if the machine was in idle longer than a spec. period of time */
+  if (state->idle_time.minutes >= MAX_IDLE_TIME && state->pump == 0)
   {
     if (state->blink_counter < 2)
     {
@@ -458,10 +460,10 @@ void soundNotification(CURRENT_STATE *state)
       uView.invert(0);
     }
   }
-
-  if ((state->brew_time.seconds >= BREW_WARN_TIME) &&
-      (state->brew_time.seconds < BREW_WARN_TIME + 1) && (state->pump == 1))
-  { 
+  /* Do a single notification when brewing */
+  else if ((state->brew_time.seconds >= BREW_WARN_TIME) &&
+           (state->brew_time.seconds < BREW_WARN_TIME + 1) && (state->pump == 1))
+  {
     if (state->blink_counter == 0)
     {
       turnOnBuzzer(1);
@@ -472,6 +474,12 @@ void soundNotification(CURRENT_STATE *state)
       turnOnBuzzer(0);
       uView.invert(0);
     }
+  }
+  /* Turn off the notification otherwise */
+  else
+  {
+    turnOnBuzzer(0);
+    uView.invert(0);
   }
 }
 
@@ -484,7 +492,7 @@ void drawIdleScreen(CURRENT_STATE *state)
   formatTime(&state->run_time, buff);
   drawSubInformation(y, buff, state, width);
 
-  soundNotification(state);
+  idleNotification(state);
 }
 
 
@@ -503,7 +511,7 @@ void drawBrewScreen(CURRENT_STATE *state)
   sprintf(buff, "%02d", round(state->temperature));
   drawSubInformation(y, buff, state, width);
 
-  soundNotification(state);
+  idleNotification(state);
 }
 
 
@@ -545,6 +553,14 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
   {
     if (state->screen == SCREEN_BREW)
     {
+      /* Reset the idle timer when brewing was longer than spec. period of time
+         or machine was in idle longer than max idle time */
+      if(state->brew_time.seconds >= MIN_BREW_TIME || 
+         state->idle_time.minutes >= MAX_IDLE_TIME)
+      {
+        initTime(&current_state.idle_time);
+      }
+      
       /* Reset the time */
       initTime(&state->brew_time);
     }
@@ -558,7 +574,6 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
     {
       /* Reset the brew time */
       initTime(&state->brew_time);
-      initTime(&current_state.buzzer_time);
       state->shot_state = SHOT_BREWING;
     }
   }
@@ -603,7 +618,6 @@ void selectScreen(CURRENT_STATE *state)
  */
 void updatePumpState(CURRENT_STATE *state)
 {
-  /* TODO: add some filtering here... */
   state->pump = measurePumpState();
 }
 
