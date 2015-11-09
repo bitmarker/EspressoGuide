@@ -16,6 +16,16 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/***
+ * # Feature list #
+ * 
+ * 1) Temperature display (current and trend)
+ * 2) Run time display
+ * 3) Brew timer with shot notification
+ * 4) Idle notification
+ * 
+ */
+
 #include "utils.h"
 #include "espresso_guide.h"
 #include <MicroView.h>
@@ -26,7 +36,8 @@ CURRENT_STATE current_state;
 
 /* Define constants */
 #define PIN_PUMP_MEAS         A0
-#define PIN_DI                3
+#define PIN_DI_T1             3
+#define PIN_DI_T2             4
 #define PIN_VCC               2
 #define PIN_BUZZER            A1
 
@@ -46,9 +57,12 @@ CURRENT_STATE current_state;
 
 /* Define global variables */
 ACTION_COUNTER counters[MAX_COUNTERS];
+
 uint16_t SCREEN_WIDTH = uView.getLCDWidth();
 uint16_t SCREEN_HEIGHT = uView.getLCDHeight();
-TSIC mainTempSensor(PIN_DI, PIN_VCC);
+
+TSIC tempSensorT1(PIN_DI_T1, PIN_VCC);
+TSIC tempSensorT2(PIN_DI_T2, PIN_VCC);
 
 void setupPins()
 {
@@ -68,17 +82,17 @@ byte measurePumpState()
   return pump_val > PUMP_THRESHOLD;
 }
 
-double measureMainTemperature()
+double measureTemperature(TSIC *sensor)
 {
   uint16_t temp_raw;
   double temp;
   uint8_t res;
 
-  res = mainTempSensor.getTemperature(&temp_raw);
+  res = sensor->getTemperature(&temp_raw);
 
   if (res)
   {
-    temp = mainTempSensor.calc_Celsius(&temp_raw);
+    temp = sensor->calc_Celsius(&temp_raw);
     return temp;
   }
 
@@ -156,6 +170,7 @@ void setupDisplay()
 void setupState()
 {
   current_state.error_counter = 0;
+  current_state.tempSensorT2Available = 0;
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
   initTime(&current_state.run_time);
@@ -626,7 +641,7 @@ void updatePumpState(CURRENT_STATE *state)
  */
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
-  double t = measureMainTemperature();
+  double t = measureTemperature(&tempSensorT1);
 
   /* If the temperature is NaN or zero, set the error flag */
   if (isnan(t) || t < 0.1 || t > 250)

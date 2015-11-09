@@ -111,7 +111,11 @@ typedef struct __current_state
   /* Temperature data */
   MEAS_DATA temp_data;
 
+  /* Count sensor errors until going to error state */
   unsigned long error_counter;
+
+  /* T2 sensor connection state */
+  unsigned char tempSensorT2Available;
 } CURRENT_STATE;
 
 typedef void (*ACTION_COUNTER_CALLBACK)(CURRENT_STATE*);
