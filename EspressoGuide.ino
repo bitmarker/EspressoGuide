@@ -508,6 +508,8 @@ void drawIdleScreen(CURRENT_STATE *state)
   drawSubInformation(y, buff, state, width);
 
   idleNotification(state);
+
+  uView.lineH(0, SCREEN_HEIGHT - 1, state->idle_time.minutes * SCREEN_WIDTH / MAX_IDLE_TIME);
 }
 
 
@@ -636,13 +638,8 @@ void updatePumpState(CURRENT_STATE *state)
   state->pump = measurePumpState();
 }
 
-/**
- * Function for reading the actual temperature value
- */
-void updateCurrentTemperature(CURRENT_STATE *state)
+unsigned char checkTemperatureValue(double t, CURRENT_STATE *state)
 {
-  double t = measureTemperature(&tempSensorT1);
-
   /* If the temperature is NaN or zero, set the error flag */
   if (isnan(t) || t < 0.1 || t > 250)
   {
@@ -656,15 +653,62 @@ void updateCurrentTemperature(CURRENT_STATE *state)
       state->error = ERROR_SENSOR;
     }
 
-    t = 0;
-    return;
+    return 0;
   }
   else
   {
     state->error_counter = 0;
     state->error = ERROR_NONE;
-    state->temperature_fast = t;
+    return 1;
   }
+}
+
+/**
+ * Function for reading the actual temperature value
+ */
+void updateCurrentTemperature(CURRENT_STATE *state)
+{
+  double t_mean = 0;
+  
+  if(state->screen == SCREEN_WELCOME)
+  {
+    state->tempSensorT1Available = (isnan(measureTemperature(&tempSensorT1)) != 1);
+    state->tempSensorT2Available = (isnan(measureTemperature(&tempSensorT2)) != 1);
+    return;
+  }
+
+  if(!state->tempSensorT1Available && !state->tempSensorT2Available)
+  {
+    state->temperature_fast = 0;
+    state->temperature = 0;
+    return;
+  }
+
+  if(state->tempSensorT1Available)
+  {
+    double t1 = measureTemperature(&tempSensorT1);
+    
+    if(checkTemperatureValue(t1, state))
+    {
+      t_mean = t1;
+    }
+    else
+    {
+      t_mean = 0;
+    }
+  }
+
+  if(state->tempSensorT2Available)
+  {
+    double t2 = measureTemperature(&tempSensorT2);
+    
+    if(checkTemperatureValue(t2, state))
+    {
+      t_mean = (t_mean + t2) / 2;
+    }
+  }
+
+  state->temperature_fast = t_mean;
 
   /* Add the value to the last measurements buffer and calculate the linearization */
   addNextValue(&state->temp_data, state->temperature_fast);

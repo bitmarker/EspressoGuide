@@ -114,6 +114,9 @@ typedef struct __current_state
   /* Count sensor errors until going to error state */
   unsigned long error_counter;
 
+  /* T1 sensor connection state */
+  unsigned char tempSensorT1Available;
+  
   /* T2 sensor connection state */
   unsigned char tempSensorT2Available;
 } CURRENT_STATE;
