@@ -46,7 +46,7 @@ CURRENT_STATE current_state;
 #define SLOPE_DELTA           0.03
 #define FONT_CHAR_HEIGHT      20 /* pixels */
 #define MAX_COUNTERS          6
-#define DEVICE_DESCRIPTION    "EspressoGuide v0.2.1"
+#define DEVICE_DESCRIPTION    "EspressoGuide v0.2.2"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
 #define MAX_IDLE_TIME         25 /* minutes */
 #define BREW_WARN_TIME        20 /* seconds */
