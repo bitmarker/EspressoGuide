@@ -37,7 +37,7 @@ CURRENT_STATE current_state;
 /* Define constants */
 #define PIN_PUMP_MEAS         A0
 #define PIN_DI_T1             3
-#define PIN_DI_T2             4
+#define PIN_DI_T2             5
 #define PIN_VCC               2
 #define PIN_BUZZER            A1
 
@@ -169,7 +169,8 @@ void setupDisplay()
 
 void setupState()
 {
-  current_state.error_counter = 0;
+  current_state.error_counter[0] = 0;
+  current_state.error_counter[1] = 0;
   current_state.tempSensorT2Available = 0;
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
@@ -501,6 +502,8 @@ void idleNotification(CURRENT_STATE *state)
 
 void drawIdleScreen(CURRENT_STATE *state)
 {
+  static unsigned char blinky = 0;
+  
   char buff[10];
   uint16_t y, width;
   uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
@@ -510,7 +513,10 @@ void drawIdleScreen(CURRENT_STATE *state)
 
   idleNotification(state);
 
-  uView.lineH(0, SCREEN_HEIGHT - 1, state->idle_time.minutes * SCREEN_WIDTH / MAX_IDLE_TIME);
+  uView.setCursor(0, 0);
+  uView.print(state->t1);
+  uView.setCursor(0, 20);
+  uView.print(state->t2);
 }
 
 
@@ -695,6 +701,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     if(checkTemperatureValue(t1, state, 0))
     {
       t_mean = t1;
+      state->t1 = t1;
     }
     else
     {
@@ -708,6 +715,8 @@ void updateCurrentTemperature(CURRENT_STATE *state)
 
     if(checkTemperatureValue(t2, state, 1))
     {
+      state->t2 = t2;
+      
       if(state->tempSensorT1Available)
       {
         t_mean = (t_mean + t2) / 2;

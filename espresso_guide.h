@@ -79,6 +79,12 @@ typedef struct __current_state
   /* last temperature value */
   double last_temperature;
 
+  /* Raw value if the temperature sensor 1 */
+  double t1;
+  
+  /* Raw value if the temperature sensor 2 */
+  double t2;
+
   /* Pump state (1 = on, 0 = off) */
   unsigned char pump;
 
