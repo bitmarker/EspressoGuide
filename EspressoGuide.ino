@@ -18,12 +18,12 @@
 
 /***
  * # Feature list #
- * 
+ *
  * 1) Temperature display (current and trend)
  * 2) Run time display
  * 3) Brew timer with shot notification
  * 4) Idle notification
- * 
+ *
  */
 
 #include "utils.h"
@@ -37,7 +37,7 @@ CURRENT_STATE current_state;
 /* Define constants */
 #define PIN_PUMP_MEAS         A0
 #define PIN_DI_T1             3
-#define PIN_DI_T2             4
+#define PIN_DI_T2             5
 #define PIN_VCC               2
 #define PIN_BUZZER            A1
 
@@ -49,6 +49,7 @@ CURRENT_STATE current_state;
 #define DEVICE_DESCRIPTION    "EspressoGuide v0.2.2"
 #define PUMP_THRESHOLD        15 /* x/1024.0*3.3 mV */
 #define MAX_IDLE_TIME         25 /* minutes */
+#define MIN_T_FOR_IDLE_WARN   40
 #define BREW_WARN_TIME        20 /* seconds */
 #define MIN_BREW_TIME         3  /* seconds */
 
@@ -169,7 +170,8 @@ void setupDisplay()
 
 void setupState()
 {
-  current_state.error_counter = 0;
+  current_state.error_counter[0] = 0;
+  current_state.error_counter[1] = 0;
   current_state.tempSensorT2Available = 0;
   current_state.error = ERROR_NONE;
   current_state.screen = SCREEN_WELCOME;
@@ -264,7 +266,8 @@ void drawErrorScreen(CURRENT_STATE *state)
   uView.setCursor(0, 0);
   switch (state->error)
   {
-    case ERROR_SENSOR:
+    case ERROR_SENSOR_T1:
+    case ERROR_SENSOR_T2:
       uView.print("Sensor\nerror!");
       break;
     case ERROR_NONE:
@@ -462,7 +465,8 @@ void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, u
 void idleNotification(CURRENT_STATE *state)
 {
   /* Start notification if the machine was in idle longer than a spec. period of time */
-  if (state->idle_time.minutes >= MAX_IDLE_TIME && state->pump == 0)
+  if (state->idle_time.minutes >= MAX_IDLE_TIME && state->pump == 0 && 
+      (state->t1 > MIN_T_FOR_IDLE_WARN || state->t2 > MIN_T_FOR_IDLE_WARN))
   {
     if (state->blink_counter < 2)
     {
@@ -500,6 +504,8 @@ void idleNotification(CURRENT_STATE *state)
 
 void drawIdleScreen(CURRENT_STATE *state)
 {
+  static unsigned char blinky = 0;
+  
   char buff[10];
   uint16_t y, width;
   uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
@@ -509,7 +515,11 @@ void drawIdleScreen(CURRENT_STATE *state)
 
   idleNotification(state);
 
-  uView.lineH(0, SCREEN_HEIGHT - 1, state->idle_time.minutes * SCREEN_WIDTH / MAX_IDLE_TIME);
+  /*
+  uView.setCursor(0, 0);
+  uView.print(state->t1);
+  uView.setCursor(0, 20);
+  uView.print(state->t2);*/
 }
 
 
@@ -572,12 +582,12 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
     {
       /* Reset the idle timer when brewing was longer than spec. period of time
          or machine was in idle longer than max idle time */
-      if(state->brew_time.seconds >= MIN_BREW_TIME || 
+      if(state->brew_time.seconds >= MIN_BREW_TIME ||
          state->idle_time.minutes >= MAX_IDLE_TIME)
       {
         initTime(&current_state.idle_time);
       }
-      
+
       /* Reset the time */
       initTime(&state->brew_time);
     }
@@ -638,26 +648,26 @@ void updatePumpState(CURRENT_STATE *state)
   state->pump = measurePumpState();
 }
 
-unsigned char checkTemperatureValue(double t, CURRENT_STATE *state)
+unsigned char checkTemperatureValue(double t, CURRENT_STATE *state, unsigned char errCntr)
 {
   /* If the temperature is NaN or zero, set the error flag */
   if (isnan(t) || t < 0.1 || t > 250)
   {
-    if (state->error_counter <= MAX_ALLOWED_ERRORS)
+    if (state->error_counter[errCntr] <= MAX_ALLOWED_ERRORS)
     {
-      state->error_counter++;
+      state->error_counter[errCntr]++;
     }
     else
     {
-      state->error_counter = 0;
-      state->error = ERROR_SENSOR;
+      state->error_counter[errCntr] = 0;
+      state->error = (errCntr == 0) ? ERROR_SENSOR_T1 : ERROR_SENSOR_T2;
     }
 
     return 0;
   }
   else
   {
-    state->error_counter = 0;
+    state->error_counter[errCntr] = 0;
     state->error = ERROR_NONE;
     return 1;
   }
@@ -669,7 +679,9 @@ unsigned char checkTemperatureValue(double t, CURRENT_STATE *state)
 void updateCurrentTemperature(CURRENT_STATE *state)
 {
   double t_mean = 0;
-  
+
+  /* As long as the welcome screen is active measure the temperature to check
+  if sensors are connected and working properly. */
   if(state->screen == SCREEN_WELCOME)
   {
     state->tempSensorT1Available = (isnan(measureTemperature(&tempSensorT1)) != 1);
@@ -677,6 +689,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     return;
   }
 
+  /* No temperature sensors found */
   if(!state->tempSensorT1Available && !state->tempSensorT2Available)
   {
     state->temperature_fast = 0;
@@ -687,10 +700,11 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   if(state->tempSensorT1Available)
   {
     double t1 = measureTemperature(&tempSensorT1);
-    
-    if(checkTemperatureValue(t1, state))
+
+    if(checkTemperatureValue(t1, state, 0))
     {
       t_mean = t1;
+      state->t1 = t1;
     }
     else
     {
@@ -701,10 +715,19 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   if(state->tempSensorT2Available)
   {
     double t2 = measureTemperature(&tempSensorT2);
-    
-    if(checkTemperatureValue(t2, state))
+
+    if(checkTemperatureValue(t2, state, 1))
     {
-      t_mean = (t_mean + t2) / 2;
+      state->t2 = t2;
+      
+      if(state->tempSensorT1Available)
+      {
+        t_mean = (t_mean + t2) / 2;
+      }
+      else
+      {
+        t_mean = t2;
+      }
     }
   }
 
@@ -736,4 +759,3 @@ void loop()
   executeCounters(&current_state);
   delay(1);
 }
-

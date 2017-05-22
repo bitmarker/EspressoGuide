@@ -41,7 +41,8 @@ typedef enum __shot_state
 typedef enum __error_type
 {
   ERROR_NONE = 0,
-  ERROR_SENSOR
+  ERROR_SENSOR_T1,
+  ERROR_SENSOR_T2
 } ERROR_TYPE;
 
 typedef struct __time
@@ -54,7 +55,7 @@ typedef struct __time
 typedef struct __point
 {
   uint16_t x;
-  uint16_t y;  
+  uint16_t y;
 } POINT;
 
 typedef struct __meas_data
@@ -71,52 +72,58 @@ typedef struct __current_state
 {
   /* Unfiltered temperature value */
   double temperature_fast;
-  
+
   /* Filtered, slow temperature value */
   double temperature;
-  
+
   /* last temperature value */
   double last_temperature;
+
+  /* Raw value if the temperature sensor 1 */
+  double t1;
   
+  /* Raw value if the temperature sensor 2 */
+  double t2;
+
   /* Pump state (1 = on, 0 = off) */
   unsigned char pump;
-  
+
   /* Current error */
   ERROR_TYPE error;
-  
+
   /* Current screen */
   SCREEN_TYPE screen;
-  
+
   /* Time since power on */
   TIME run_time;
-  
+
   /* Time since the pump was turned on */
   TIME brew_time;
 
   /* Time the machine was in idle */
   TIME idle_time;
-  
+
   /* Shot was done */
   SHOT_STATE shot_state;
-  
+
   /* Temperature trend (-1, 0, 1) */
   int temp_trend;
-  
+
   /* Counter for blinking animation */
   unsigned char blink_counter;
-  
+
   /* Counter for the welcome screen */
   unsigned char welcome_counter;
-  
+
   /* Temperature data */
   MEAS_DATA temp_data;
 
   /* Count sensor errors until going to error state */
-  unsigned long error_counter;
+  unsigned char error_counter[2];
 
   /* T1 sensor connection state */
   unsigned char tempSensorT1Available;
-  
+
   /* T2 sensor connection state */
   unsigned char tempSensorT2Available;
 } CURRENT_STATE;
@@ -137,4 +144,3 @@ typedef struct __action_counter
 #define printv(name) Serial.print(#name); Serial.print(": "); Serial.println(name);
 
 #endif
-
