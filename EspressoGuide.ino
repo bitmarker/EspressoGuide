@@ -511,15 +511,10 @@ void drawIdleScreen(CURRENT_STATE *state)
   uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
   drawMainNumber(main_number, state, &y, &width);
   formatTime(&state->run_time, buff);
+  
   drawSubInformation(y, buff, state, width);
 
   idleNotification(state);
-
-  /*
-  uView.setCursor(0, 0);
-  uView.print(state->t1);
-  uView.setCursor(0, 20);
-  uView.print(state->t2);*/
 }
 
 
