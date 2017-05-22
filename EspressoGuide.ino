@@ -191,8 +191,11 @@ void setupSerial()
 void updateClock(CURRENT_STATE *state)
 {
   incrementSeconds(&state->run_time);
-  incrementSeconds(&state->idle_time);
 
+  if (state->t1 >= MIN_T_FOR_IDLE_WARN || state->t2 >= MIN_T_FOR_IDLE_WARN) {
+    incrementSeconds(&state->idle_time);
+  }
+  
   if (state->shot_state == SHOT_BREWING)
   {
     incrementSeconds(&state->brew_time);
@@ -465,8 +468,7 @@ void drawTempTrend(CURRENT_STATE *state, uint16_t y_center, uint16_t distance, u
 void idleNotification(CURRENT_STATE *state)
 {
   /* Start notification if the machine was in idle longer than a spec. period of time */
-  if (state->idle_time.minutes >= MAX_IDLE_TIME && state->pump == 0 && 
-      (state->t1 > MIN_T_FOR_IDLE_WARN || state->t2 > MIN_T_FOR_IDLE_WARN))
+  if (state->idle_time.minutes >= MAX_IDLE_TIME && state->pump == 0)
   {
     if (state->blink_counter < 2)
     {
@@ -502,17 +504,31 @@ void idleNotification(CURRENT_STATE *state)
   }
 }
 
+void drawIdleProgress(CURRENT_STATE *state)
+{
+  if (state->idle_time.minutes < MAX_IDLE_TIME && state->pump == 0)
+  {
+    unsigned int perc = state->idle_time.minutes * 100 / MAX_IDLE_TIME;
+    
+    dottedLineH(0, 0, SCREEN_WIDTH * perc / 100);
+    
+    dottedLineH(SCREEN_WIDTH - SCREEN_WIDTH * perc / 100 - 1, SCREEN_HEIGHT - 1, SCREEN_WIDTH * perc / 100);
+  }
+}
+
 void drawIdleScreen(CURRENT_STATE *state)
 {
   static unsigned char blinky = 0;
-  
+
   char buff[10];
   uint16_t y, width;
   uint16_t main_number = state->screen == SCREEN_BREW ? state->brew_time.seconds : round(state->temperature);
   drawMainNumber(main_number, state, &y, &width);
   formatTime(&state->run_time, buff);
-  
+
   drawSubInformation(y, buff, state, width);
+
+  drawIdleProgress(state);
 
   idleNotification(state);
 }
@@ -577,8 +593,8 @@ void changeScreen(CURRENT_STATE *state, SCREEN_TYPE new_screen)
     {
       /* Reset the idle timer when brewing was longer than spec. period of time
          or machine was in idle longer than max idle time */
-      if(state->brew_time.seconds >= MIN_BREW_TIME ||
-         state->idle_time.minutes >= MAX_IDLE_TIME)
+      if (state->brew_time.seconds >= MIN_BREW_TIME ||
+          state->idle_time.minutes >= MAX_IDLE_TIME)
       {
         initTime(&current_state.idle_time);
       }
@@ -677,7 +693,7 @@ void updateCurrentTemperature(CURRENT_STATE *state)
 
   /* As long as the welcome screen is active measure the temperature to check
   if sensors are connected and working properly. */
-  if(state->screen == SCREEN_WELCOME)
+  if (state->screen == SCREEN_WELCOME)
   {
     state->tempSensorT1Available = (isnan(measureTemperature(&tempSensorT1)) != 1);
     state->tempSensorT2Available = (isnan(measureTemperature(&tempSensorT2)) != 1);
@@ -685,18 +701,18 @@ void updateCurrentTemperature(CURRENT_STATE *state)
   }
 
   /* No temperature sensors found */
-  if(!state->tempSensorT1Available && !state->tempSensorT2Available)
+  if (!state->tempSensorT1Available && !state->tempSensorT2Available)
   {
     state->temperature_fast = 0;
     state->temperature = 0;
     return;
   }
 
-  if(state->tempSensorT1Available)
+  if (state->tempSensorT1Available)
   {
     double t1 = measureTemperature(&tempSensorT1);
 
-    if(checkTemperatureValue(t1, state, 0))
+    if (checkTemperatureValue(t1, state, 0))
     {
       t_mean = t1;
       state->t1 = t1;
@@ -707,15 +723,15 @@ void updateCurrentTemperature(CURRENT_STATE *state)
     }
   }
 
-  if(state->tempSensorT2Available)
+  if (state->tempSensorT2Available)
   {
     double t2 = measureTemperature(&tempSensorT2);
 
-    if(checkTemperatureValue(t2, state, 1))
+    if (checkTemperatureValue(t2, state, 1))
     {
       state->t2 = t2;
-      
-      if(state->tempSensorT1Available)
+
+      if (state->tempSensorT1Available)
       {
         t_mean = (t_mean + t2) / 2;
       }
